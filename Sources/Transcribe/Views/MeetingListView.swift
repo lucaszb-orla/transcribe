@@ -8,12 +8,18 @@ struct MeetingListView: View {
     var body: some View {
         NavigationSplitView {
             List(appState.store.search(query), selection: $selection) { meeting in
-                VStack(alignment: .leading) {
-                    Text(meeting.title).font(.headline)
-                    Text(meeting.startedAt, style: .date)
-                        .font(.caption)
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(meeting.title).font(.headline)
+                        Text(meeting.startedAt, style: .date)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "waveform")
                         .foregroundStyle(.secondary)
                 }
+                .padding(.vertical, 2)
                 .tag(meeting)
             }
             .searchable(text: $query, prompt: "Buscar por título ou transcrição")
@@ -25,13 +31,27 @@ struct MeetingListView: View {
                     }
                 }
             }
+            .overlay {
+                if appState.store.search(query).isEmpty {
+                    ContentUnavailableView(
+                        query.isEmpty ? "Nenhuma reunião ainda" : "Nenhum resultado",
+                        systemImage: query.isEmpty ? "waveform" : "magnifyingglass",
+                        description: Text(query.isEmpty
+                            ? "Inicie uma gravação para ver a transcrição aqui."
+                            : "Tente buscar por outro título ou trecho da transcrição.")
+                    )
+                }
+            }
         } detail: {
             if let selection {
                 MeetingDetailView(meeting: selection)
                     .id(selection.id)
             } else {
-                Text("Selecione uma reunião")
-                    .foregroundStyle(.secondary)
+                ContentUnavailableView(
+                    "Selecione uma reunião",
+                    systemImage: "doc.text.magnifyingglass",
+                    description: Text("Escolha uma reunião na lista para ver a transcrição e o resumo.")
+                )
             }
         }
         .frame(minWidth: 700, minHeight: 450)
@@ -39,7 +59,7 @@ struct MeetingListView: View {
             get: { appState.errorMessage != nil },
             set: { if !$0 { appState.errorMessage = nil } }
         )) {
-            Button("OK") {}
+            Button("Fechar") {}
         } message: {
             Text(appState.errorMessage ?? "")
         }
