@@ -1,10 +1,27 @@
+import Foundation
 import FoundationModels
 
 /// Turns a finished transcript into a title, bullet-point summary and action items,
 /// entirely on-device via the Foundation Models framework (PRD: no cloud AI in v1).
 enum Summarizer {
-    enum SummarizerError: Error {
+    enum SummarizerError: LocalizedError {
         case modelUnavailable(SystemLanguageModel.Availability.UnavailableReason)
+
+        var errorDescription: String? {
+            switch self {
+            case .modelUnavailable(let reason):
+                switch reason {
+                case .appleIntelligenceNotEnabled:
+                    return "O Apple Intelligence não está ativado. Ative em Ajustes do Sistema › Apple Intelligence e Siri para gerar resumos automáticos."
+                case .deviceNotEligible:
+                    return "Este Mac não é compatível com o Apple Intelligence, então o resumo automático fica indisponível."
+                case .modelNotReady:
+                    return "O modelo do Apple Intelligence ainda está sendo baixado. Tente novamente em alguns minutos."
+                @unknown default:
+                    return "O resumo automático (Apple Intelligence) está indisponível no momento."
+                }
+            }
+        }
     }
 
     static func summarize(transcript: String, calendarContext: String?) async throws -> MeetingSummary {

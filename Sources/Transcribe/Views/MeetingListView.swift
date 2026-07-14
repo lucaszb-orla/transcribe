@@ -20,14 +20,8 @@ struct MeetingListView: View {
             .navigationTitle("Reuniões")
             .toolbar {
                 ToolbarItem {
-                    if appState.mode == .meeting {
-                        Button("Encerrar transcrição", systemImage: "stop.circle") {
-                            Task { await appState.endMeeting() }
-                        }
-                    } else {
-                        Button("Nova transcrição", systemImage: "record.circle") {
-                            Task { await appState.startMeeting() }
-                        }
+                    Button("Nova transcrição", systemImage: "record.circle") {
+                        Task { await appState.startMeeting() }
                     }
                 }
             }

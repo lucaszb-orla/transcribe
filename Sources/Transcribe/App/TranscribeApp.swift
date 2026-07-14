@@ -20,5 +20,10 @@ struct TranscribeApp: App {
                 .environment(appState.permissions)
         }
         .defaultLaunchBehavior(.presented)
+
+        Settings {
+            SettingsView()
+                .environment(appState)
+        }
     }
 }

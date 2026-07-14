@@ -19,12 +19,17 @@ final class AppState {
     let calendarMonitor = CalendarMonitor()
     let store = MeetingStore()
     let permissions = PermissionsManager()
+    let settings = AppSettings()
 
     private var recordingSession: RecordingSession?
     private var pendingSuggestion: MeetingSuggestion?
 
     var suggestion: MeetingSuggestion? { calendarMonitor.suggestion }
     var liveTranscript: [TranscriptSegment] { recordingSession?.liveSegments ?? [] }
+    var liveText: String { recordingSession?.liveText ?? "" }
+    var isPaused: Bool { recordingSession?.state == .paused }
+    var micLevel: Float { recordingSession?.micLevel ?? 0 }
+    var recordingStartedAt: Date?
 
     init() {
         Task { await self.start() }
@@ -36,8 +41,9 @@ final class AppState {
 
     func startMeeting(from suggestion: MeetingSuggestion? = nil) async {
         guard mode == .standby else { return }
+        permissions.refresh()
         guard permissions.allGranted else {
-            errorMessage = "Conceda acesso ao microfone, reconhecimento de fala e calendário antes de gravar."
+            errorMessage = "Conceda acesso ao microfone, reconhecimento de fala, calendário e gravação de tela antes de gravar."
             return
         }
         pendingSuggestion = suggestion
@@ -46,7 +52,8 @@ final class AppState {
         let session = RecordingSession()
         recordingSession = session
         do {
-            try await session.start()
+            try await session.start(inputDeviceID: settings.resolvedInputDeviceID, locale: settings.transcriptionLocale)
+            recordingStartedAt = Date()
             mode = .meeting
         } catch {
             logger.error("startMeeting failed: \(String(describing: error), privacy: .public)")
@@ -55,10 +62,19 @@ final class AppState {
         }
     }
 
+    func pauseMeeting() {
+        recordingSession?.pause()
+    }
+
+    func resumeMeeting() {
+        recordingSession?.resume()
+    }
+
     func endMeeting() async {
         guard mode == .meeting, let session = recordingSession else { return }
         mode = .standby
         recordingSession = nil
+        recordingStartedAt = nil
 
         let (segments, startedAt, endedAt) = await session.stop()
         let transcriptText = segments.map(\.text).joined(separator: " ")

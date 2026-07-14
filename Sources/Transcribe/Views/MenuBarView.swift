@@ -39,10 +39,15 @@ struct MenuBarView: View {
 
     private var statusHeader: some View {
         Label(
-            appState.mode == .meeting ? "Gravando reunião" : "Em standby",
+            statusText,
             systemImage: appState.mode == .meeting ? "record.circle" : "moon.zzz"
         )
         .font(.headline)
+    }
+
+    private var statusText: String {
+        guard appState.mode == .meeting else { return "Em standby" }
+        return appState.isPaused ? "Gravação pausada" : "Gravando reunião"
     }
 
     private func suggestionBanner(_ suggestion: MeetingSuggestion) -> some View {
@@ -65,6 +70,11 @@ struct MenuBarView: View {
     @ViewBuilder
     private var actionButton: some View {
         if appState.mode == .meeting {
+            if appState.isPaused {
+                Button("Retomar gravação") { appState.resumeMeeting() }
+            } else {
+                Button("Pausar gravação") { appState.pauseMeeting() }
+            }
             Button("Encerrar reunião") {
                 Task { await appState.endMeeting() }
             }
