@@ -32,10 +32,24 @@ struct MeetingListView: View {
             }
             .searchable(text: $query, prompt: "Buscar por título ou transcrição")
             .navigationTitle("Reuniões")
+            .safeAreaInset(edge: .bottom) {
+                Button("Nova transcrição", systemImage: "record.circle") {
+                    Task { await appState.startMeeting() }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .frame(maxWidth: .infinity)
+                .padding(8)
+            }
             .toolbar {
                 ToolbarItem {
                     Button("Nova transcrição", systemImage: "record.circle") {
                         Task { await appState.startMeeting() }
+                    }
+                }
+                ToolbarItem {
+                    SettingsLink {
+                        Label("Ajustes", systemImage: "gearshape")
                     }
                 }
             }

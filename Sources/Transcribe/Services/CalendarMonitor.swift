@@ -6,6 +6,7 @@ struct MeetingSuggestion: Identifiable, Equatable {
     let id: String // EKEvent.eventIdentifier
     let title: String
     let start: Date
+    let end: Date
     let participants: [String]
     let callURL: URL
 }
@@ -17,9 +18,13 @@ final class CalendarMonitor {
     private(set) var suggestion: MeetingSuggestion?
     private(set) var authorizationDenied = false
 
+    /// Called once per newly-detected candidate event (used for opt-in auto-recording).
+    var onNewCandidate: ((MeetingSuggestion) -> Void)?
+
     private let store = EKEventStore()
     private var timer: Timer?
     private var dismissedEventIDs: Set<String> = []
+    private var lastNotifiedID: String?
 
     /// How far ahead of an event's start time we start suggesting it.
     private let lookahead: TimeInterval = 3 * 60
@@ -74,12 +79,20 @@ final class CalendarMonitor {
             return
         }
 
-        suggestion = MeetingSuggestion(
+        let newSuggestion = MeetingSuggestion(
             id: event.eventIdentifier,
             title: event.title ?? "Reunião sem título",
             start: event.startDate,
+            end: event.endDate,
             participants: event.attendees?.compactMap(\.name) ?? [],
             callURL: callURL
         )
+        suggestion = newSuggestion
+
+        // Fire the callback once per distinct event so auto-record doesn't re-trigger each poll.
+        if newSuggestion.id != lastNotifiedID {
+            lastNotifiedID = newSuggestion.id
+            onNewCandidate?(newSuggestion)
+        }
     }
 }

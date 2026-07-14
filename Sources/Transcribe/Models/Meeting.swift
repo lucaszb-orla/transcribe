@@ -17,11 +17,24 @@ struct Meeting: Codable, Identifiable, Hashable {
     var summaryBullets: [String]
     var summaryProse: String? = nil
     var actionItems: [String]
+    /// Texts of the action items the user has ticked off. Optional so older saved meetings decode.
+    /// ponytail: keyed by text (action items aren't editable), so duplicate texts toggle together.
+    var doneActionItems: [String]? = nil
     var audioFileName: String?
 
     /// True once a summary has been generated (either format).
     var hasSummary: Bool {
         !summaryBullets.isEmpty || !(summaryProse ?? "").isEmpty
+    }
+
+    func isActionDone(_ item: String) -> Bool {
+        doneActionItems?.contains(item) ?? false
+    }
+
+    mutating func toggleActionDone(_ item: String) {
+        var done = doneActionItems ?? []
+        if let i = done.firstIndex(of: item) { done.remove(at: i) } else { done.append(item) }
+        doneActionItems = done
     }
 
     var fullTranscriptText: String {

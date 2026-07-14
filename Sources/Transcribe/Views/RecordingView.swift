@@ -11,7 +11,6 @@ struct RecordingView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            meter
             Divider()
             transcript
             Divider()
@@ -20,50 +19,61 @@ struct RecordingView: View {
         .onReceive(timer) { now = $0 }
     }
 
-    private var meter: some View {
-        HStack(spacing: 8) {
-            Image(systemName: appState.isPaused ? "mic.slash" : "mic.fill")
-                .foregroundStyle(.secondary)
-            LevelMeter(level: appState.isPaused ? 0 : appState.micLevel)
-                .frame(height: 8)
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 8)
-    }
-
     private var header: some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(appState.isPaused ? .orange : .red)
-                .frame(width: 10, height: 10)
-                .opacity(appState.isPaused ? 1 : pulse)
-                .animation(appState.isPaused ? nil : .easeInOut(duration: 0.8).repeatForever(), value: pulse)
-            Text(appState.isPaused ? "Pausado" : "Gravando")
-                .font(.headline)
-            Spacer()
-            Text(elapsed)
-                .font(.system(.title3, design: .monospaced))
-                .foregroundStyle(.secondary)
+        VStack(spacing: 12) {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(appState.isPaused ? .orange : .red)
+                    .frame(width: 10, height: 10)
+                    .opacity(appState.isPaused ? 1 : pulse)
+                    .animation(appState.isPaused ? nil : .easeInOut(duration: 0.8).repeatForever(), value: pulse)
+                Text(appState.isPaused ? "Pausado" : "Gravando")
+                    .font(.headline)
+                Spacer()
+                Text(elapsed)
+                    .font(.system(.title3, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+
+            HStack(spacing: 8) {
+                Image(systemName: appState.isPaused ? "mic.slash.fill" : "mic.fill")
+                    .foregroundStyle(appState.isPaused ? .secondary : .primary)
+                    .imageScale(.small)
+                LevelMeter(level: appState.isPaused ? 0 : appState.micLevel)
+                    .frame(height: 6)
+            }
         }
         .padding()
+        .background(.bar)
         .onAppear { pulse = 0.3 }
     }
 
     @State private var pulse = 1.0
 
+    @ViewBuilder
     private var transcript: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                Text(appState.liveText.isEmpty ? "Ouvindo… fale algo para ver a transcrição aparecer." : appState.liveText)
-                    .font(.body)
-                    .foregroundStyle(appState.liveText.isEmpty ? .secondary : .primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
-                    .padding()
-                    .id("live")
+        if appState.liveText.isEmpty {
+            ContentUnavailableView {
+                Label("Ouvindo…", systemImage: "waveform")
+            } description: {
+                Text("Fale algo para ver a transcrição aparecer em tempo real.")
             }
-            .onChange(of: appState.liveText) {
-                withAnimation { proxy.scrollTo("live", anchor: .bottom) }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    Text(appState.liveText)
+                        .font(.body)
+                        .frame(maxWidth: 640, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                        .padding()
+                        .id("live")
+                }
+                .onChange(of: appState.liveText) {
+                    withAnimation { proxy.scrollTo("live", anchor: .bottom) }
+                }
             }
         }
     }
@@ -71,15 +81,11 @@ struct RecordingView: View {
     private var controls: some View {
         HStack {
             if appState.isPaused {
-                Button {
-                    appState.resumeMeeting()
-                } label: {
+                Button { appState.resumeMeeting() } label: {
                     Label("Retomar", systemImage: "play.fill")
                 }
             } else {
-                Button {
-                    appState.pauseMeeting()
-                } label: {
+                Button { appState.pauseMeeting() } label: {
                     Label("Pausar", systemImage: "pause.fill")
                 }
             }
@@ -91,9 +97,13 @@ struct RecordingView: View {
             } label: {
                 Label("Encerrar", systemImage: "stop.fill")
             }
+            .buttonStyle(.borderedProminent)
+            .tint(.red)
             .keyboardShortcut(".", modifiers: .command)
         }
+        .controlSize(.large)
         .padding()
+        .background(.bar)
     }
 
     private var elapsed: String {

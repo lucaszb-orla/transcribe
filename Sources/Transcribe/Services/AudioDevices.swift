@@ -93,13 +93,20 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(transcriptionLocaleID, forKey: Self.localeKey) }
     }
 
+    /// Opt-in: auto-start recording when a calendar meeting begins and auto-stop at its end.
+    var autoRecordFromCalendar: Bool {
+        didSet { UserDefaults.standard.set(autoRecordFromCalendar, forKey: Self.autoRecordKey) }
+    }
+
     private static let inputKey = "selectedInputUID"
     private static let localeKey = "transcriptionLocaleID"
+    private static let autoRecordKey = "autoRecordFromCalendar"
 
     init() {
         selectedInputUID = UserDefaults.standard.string(forKey: Self.inputKey)
         // Default to Brazilian Portuguese; the system locale ("en-US" here) was transcribing English.
         transcriptionLocaleID = UserDefaults.standard.string(forKey: Self.localeKey) ?? "pt-BR"
+        autoRecordFromCalendar = UserDefaults.standard.bool(forKey: Self.autoRecordKey)
     }
 
     /// Resolve the current setting to a device ID for the recording engine.

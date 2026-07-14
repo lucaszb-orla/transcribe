@@ -12,50 +12,22 @@ struct MeetingDetailView: View {
     /// Force the options form to show even when a summary already exists (regenerate).
     @State private var editingOptions = false
 
-    @State private var followUpTone: FollowUpDrafter.Tone = .formal
-    @State private var followUp = ""
-    @State private var draftingFollowUp = false
-    @State private var followUpError: String?
+    @State private var showSavePreset = false
+    @State private var newPresetName = ""
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                TextField("Título", text: $meeting.title)
-                    .font(.title2.bold())
-                    .textFieldStyle(.plain)
-
-                if !meeting.participants.isEmpty {
-                    Label(meeting.participants.joined(separator: ", "), systemImage: "person.2")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
+            VStack(alignment: .leading, spacing: 28) {
+                header
                 summarySection
-
-                if !meeting.actionItems.isEmpty {
-                    GroupBox("Ações") {
-                        VStack(alignment: .leading, spacing: 6) {
-                            ForEach(meeting.actionItems, id: \.self) { item in
-                                Label(item, systemImage: "checkmark.circle")
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 4)
-                    }
-                }
-
-                followUpSection
-
-                GroupBox("Transcrição") {
-                    TextEditor(text: $meeting.editableTranscriptText)
-                        .font(.body)
-                        .scrollContentBackground(.hidden)
-                        .frame(minHeight: 300)
-                        .padding(.top, 4)
-                }
+                if !meeting.actionItems.isEmpty { actionsSection }
+                transcriptSection
             }
-            .padding()
+            .padding(24)
+            .frame(maxWidth: 720, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .background(.background)
         .toolbar {
             ToolbarItem {
                 Menu {
@@ -68,6 +40,12 @@ struct MeetingDetailView: View {
                 }
             }
             ToolbarItem {
+                Button("Salvar", systemImage: "checkmark") {
+                    try? appState.store.save(meeting)
+                }
+                .keyboardShortcut("s", modifiers: .command)
+            }
+            ToolbarItem {
                 Button("Excluir", systemImage: "trash", role: .destructive) {
                     do {
                         try appState.store.delete(meeting)
@@ -77,13 +55,44 @@ struct MeetingDetailView: View {
                     }
                 }
             }
-            ToolbarItem {
-                Button("Salvar", systemImage: "square.and.arrow.down") {
-                    try? appState.store.save(meeting)
-                }
-                .keyboardShortcut("s", modifiers: .command)
-            }
         }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField("Título", text: $meeting.title)
+                .font(.largeTitle.bold())
+                .textFieldStyle(.plain)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 14) { metadata }
+                VStack(alignment: .leading, spacing: 4) { metadata }
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var metadata: some View {
+        Label(meeting.startedAt.formatted(date: .abbreviated, time: .shortened), systemImage: "calendar")
+        if let duration = durationText {
+            Label(duration, systemImage: "clock")
+        }
+        if !meeting.participants.isEmpty {
+            Label(meeting.participants.joined(separator: ", "), systemImage: "person.2")
+                .lineLimit(1)
+        }
+    }
+
+    private var durationText: String? {
+        guard let end = meeting.endedAt else { return nil }
+        let seconds = Int(end.timeIntervalSince(meeting.startedAt))
+        guard seconds > 0 else { return nil }
+        let m = seconds / 60, s = seconds % 60
+        return m > 0 ? "\(m) min" : "\(s)s"
     }
 
     // MARK: - Summary
@@ -91,25 +100,28 @@ struct MeetingDetailView: View {
     @ViewBuilder
     private var summarySection: some View {
         if meeting.hasSummary, !editingOptions {
-            GroupBox {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Label("Resumo", systemImage: "sparkles").font(.headline)
-                        Spacer()
-                        Button("Refazer", systemImage: "arrow.clockwise") { editingOptions = true }
-                            .buttonStyle(.borderless)
-                            .controlSize(.small)
-                    }
-                    if let prose = meeting.summaryProse, !prose.isEmpty {
-                        Text(prose).textSelection(.enabled)
-                    } else {
+            section("Resumo", systemImage: "sparkles") {
+                Button("Refazer", systemImage: "arrow.clockwise") { editingOptions = true }
+                    .buttonStyle(.borderless)
+                    .controlSize(.small)
+            } content: {
+                if let prose = meeting.summaryProse, !prose.isEmpty {
+                    Text(prose)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
                         ForEach(meeting.summaryBullets, id: \.self) { bullet in
-                            Label(bullet, systemImage: "circle.fill").imageScale(.small)
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Image(systemName: "circle.fill")
+                                    .font(.system(size: 5))
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.top, 6)
+                                Text(bullet).textSelection(.enabled)
+                            }
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 4)
             }
         } else {
             summaryOptionsForm
@@ -118,8 +130,9 @@ struct MeetingDetailView: View {
 
     private var summaryOptionsForm: some View {
         GroupBox {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Gerar resumo", systemImage: "sparkles").font(.headline)
+            VStack(alignment: .leading, spacing: 14) {
+                Label("Gerar resumo", systemImage: "sparkles")
+                    .font(.headline)
 
                 Picker("Modelo", selection: $selectedPresetID) {
                     Text("Personalizado").tag(UUID?.none)
@@ -137,12 +150,13 @@ struct MeetingDetailView: View {
                     ForEach(SummaryOptions.Format.allCases) { Text($0.label).tag($0) }
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
 
                 Toggle("Incluir itens de ação", isOn: $options.includeActionItems)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Instruções adicionais (opcional)")
-                        .font(.caption)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Instruções adicionais")
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                     TextField("ex.: foque nas decisões e responsáveis", text: $options.customInstructions, axis: .vertical)
                         .textFieldStyle(.roundedBorder)
@@ -151,14 +165,20 @@ struct MeetingDetailView: View {
 
                 if let summaryError {
                     Label(summaryError, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 HStack {
                     if editingOptions, meeting.hasSummary {
                         Button("Cancelar") { editingOptions = false; summaryError = nil }
                     }
+                    Button("Salvar como preset…", systemImage: "bookmark") {
+                        newPresetName = ""
+                        showSavePreset = true
+                    }
+                    .controlSize(.small)
                     Spacer()
                     Button {
                         Task { await generate() }
@@ -174,7 +194,85 @@ struct MeetingDetailView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 4)
+            .padding(6)
+        }
+        .alert("Salvar preset", isPresented: $showSavePreset) {
+            TextField("Nome do preset", text: $newPresetName)
+            Button("Cancelar", role: .cancel) {}
+            Button("Salvar") {
+                let name = newPresetName.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !name.isEmpty else { return }
+                appState.summaryPresets.add(name: name, options: options)
+            }
+        } message: {
+            Text("As opções atuais serão salvas como um preset reutilizável.")
+        }
+    }
+
+    // MARK: - Actions
+
+    private var actionsSection: some View {
+        section("Ações", systemImage: "checklist") {
+            EmptyView()
+        } content: {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(meeting.actionItems, id: \.self) { item in
+                    let done = meeting.isActionDone(item)
+                    Button {
+                        meeting.toggleActionDone(item)
+                        try? appState.store.save(meeting)
+                    } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                            Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(done ? Color.accentColor : .secondary)
+                            Text(item)
+                                .strikethrough(done)
+                                .foregroundStyle(done ? .secondary : .primary)
+                            Spacer()
+                        }
+                        .contentShape(.rect)
+                        .padding(.vertical, 3)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    // MARK: - Transcript
+
+    private var transcriptSection: some View {
+        section("Transcrição", systemImage: "text.quote") {
+            EmptyView()
+        } content: {
+            TextEditor(text: $meeting.editableTranscriptText)
+                .font(.body)
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: 260)
+                .padding(10)
+                .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    // MARK: - Section helper
+
+    /// A titled section with an optional trailing control — a lighter, more native look than
+    /// stacked GroupBoxes (HIG: prefer content over chrome).
+    private func section<Trailing: View, Content: View>(
+        _ title: String,
+        systemImage: String,
+        @ViewBuilder trailing: () -> Trailing,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label(title, systemImage: systemImage)
+                    .font(.headline)
+                Spacer()
+                trailing()
+            }
+            content()
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -187,72 +285,6 @@ struct MeetingDetailView: View {
             editingOptions = false
         } catch {
             summaryError = error.localizedDescription
-        }
-    }
-
-    // MARK: - Follow-up
-
-    @ViewBuilder
-    private var followUpSection: some View {
-        if !meeting.fullTranscriptText.isEmpty {
-            GroupBox {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Label("Rascunho de follow-up", systemImage: "envelope").font(.headline)
-                        Spacer()
-                        Picker("Tom", selection: $followUpTone) {
-                            ForEach(FollowUpDrafter.Tone.allCases) { Text($0.label).tag($0) }
-                        }
-                        .pickerStyle(.segmented)
-                        .fixedSize()
-                    }
-
-                    if !followUp.isEmpty {
-                        Text(followUp)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    if let followUpError {
-                        Label(followUpError, systemImage: "exclamationmark.triangle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                    }
-
-                    HStack {
-                        if !followUp.isEmpty {
-                            Button("Copiar", systemImage: "doc.on.doc") {
-                                MeetingExporter.copyToPasteboard(followUp)
-                            }
-                        }
-                        Spacer()
-                        Button {
-                            Task { await draftFollowUp() }
-                        } label: {
-                            if draftingFollowUp {
-                                ProgressView().controlSize(.small)
-                            } else {
-                                Label(followUp.isEmpty ? "Gerar rascunho" : "Gerar de novo", systemImage: "envelope")
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(draftingFollowUp)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 4)
-            }
-        }
-    }
-
-    private func draftFollowUp() async {
-        draftingFollowUp = true
-        followUpError = nil
-        defer { draftingFollowUp = false }
-        do {
-            followUp = try await appState.generateFollowUp(for: meeting, tone: followUpTone)
-        } catch {
-            followUpError = error.localizedDescription
         }
     }
 }

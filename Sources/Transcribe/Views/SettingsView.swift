@@ -37,13 +37,56 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Section("Calendário") {
+                Toggle("Iniciar e encerrar gravação automaticamente", isOn: $settings.autoRecordFromCalendar)
+                Text("Grava sozinho quando uma reunião do calendário com link de chamada começa e para no fim do evento — sem precisar clicar.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Presets de resumo") {
+                if appState.summaryPresets.presets.isEmpty {
+                    Text("Nenhum preset. Salve um a partir da tela de uma reunião.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(appState.summaryPresets.presets) { preset in
+                    HStack {
+                        TextField("Nome", text: nameBinding(for: preset))
+                            .textFieldStyle(.plain)
+                        Spacer()
+                        Text(preset.options.format.label)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Button(role: .destructive) {
+                            appState.summaryPresets.delete(preset)
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
-        .frame(width: 460, height: 300)
+        .frame(width: 480, height: 460)
         .task {
             devices = AudioDevices.inputDevices()
             locales = (try? await SpeechTranscriber.supportedLocales) ?? []
         }
+    }
+
+    /// Two-way binding that renames a preset in place (persists via the store's didSet).
+    private func nameBinding(for preset: SummaryPreset) -> Binding<String> {
+        Binding(
+            get: { appState.summaryPresets.presets.first(where: { $0.id == preset.id })?.name ?? preset.name },
+            set: { newName in
+                var updated = preset
+                updated.name = newName
+                appState.summaryPresets.update(updated)
+            }
+        )
     }
 
     /// The recognizer's supported locales, always including the current selection so it stays visible

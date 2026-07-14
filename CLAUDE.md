@@ -87,9 +87,17 @@ disco** (por design). Nada de nuvem/sync.
 - Ajustes: seleção de **microfone** e **idioma** (padrão pt-BR).
 - Resumo **sob demanda**: formato **tópicos ou prosa**, toggle de **itens de ação**, **instruções
   personalizadas**, e **presets** (Reunião geral, Daily/Standup, Call de vendas, 1:1).
+- **Presets gerenciáveis:** salvar as opções atuais como novo preset (na tela da reunião), renomear e
+  apagar (em Ajustes).
+- **Itens de ação marcáveis:** checkbox por item, com estado persistido na reunião (`doneActionItems`).
+- **Auto-iniciar/encerrar pelo calendário** (opt-in em Ajustes): grava quando o evento com link começa e
+  para no fim do evento. `MeetingSuggestion.end` + `CalendarMonitor.onNewCandidate` + auto-stop task no `AppState`.
 - **Exportar/compartilhar** (Markdown / texto / arquivo `.md`).
-- **Rascunho de follow-up** (e-mail/Slack) com escolha de tom.
 - Lista com busca, excluir, e navegação automática pra reunião recém-gravada.
+- Ajustes acessível por botão visível (menu da barra + toolbar), além de ⌘,.
+
+Nota: o "rascunho de follow-up" foi removido (não ficou bom). A ideia de direcionar a IA por
+linguagem natural continua no campo **Instruções adicionais** do resumo — sem toggles de tom.
 
 ## Gotchas conhecidos
 

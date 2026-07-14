@@ -22,6 +22,13 @@ struct MenuBarView: View {
                 NSApp.activate(ignoringOtherApps: true)
             }
 
+            SettingsLink {
+                Label("Ajustes…", systemImage: "gearshape")
+            }
+            .simultaneousGesture(TapGesture().onEnded {
+                NSApp.activate(ignoringOtherApps: true)
+            })
+
             if let error = appState.errorMessage {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)

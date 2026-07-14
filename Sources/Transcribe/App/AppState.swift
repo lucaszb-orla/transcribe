@@ -24,6 +24,7 @@ final class AppState {
 
     private var recordingSession: RecordingSession?
     private var pendingSuggestion: MeetingSuggestion?
+    private var autoStopTask: Task<Void, Never>?
 
     var suggestion: MeetingSuggestion? { calendarMonitor.suggestion }
     var liveTranscript: [TranscriptSegment] { recordingSession?.liveSegments ?? [] }
@@ -39,6 +40,12 @@ final class AppState {
     }
 
     func start() async {
+        calendarMonitor.onNewCandidate = { [weak self] suggestion in
+            Task { @MainActor in
+                guard let self, self.settings.autoRecordFromCalendar, self.mode == .standby else { return }
+                await self.startMeeting(from: suggestion)
+            }
+        }
         await calendarMonitor.start()
     }
 
@@ -58,6 +65,10 @@ final class AppState {
             try await session.start(inputDeviceID: settings.resolvedInputDeviceID, locale: settings.transcriptionLocale)
             recordingStartedAt = Date()
             mode = .meeting
+            // Auto-stop at the event's end when auto-recording is on and this came from the calendar.
+            if settings.autoRecordFromCalendar, let end = suggestion?.end {
+                scheduleAutoStop(at: end)
+            }
         } catch {
             logger.error("startMeeting failed: \(String(describing: error), privacy: .public)")
             errorMessage = "Não foi possível iniciar a gravação: \(error.localizedDescription)"
@@ -73,8 +84,20 @@ final class AppState {
         recordingSession?.resume()
     }
 
+    private func scheduleAutoStop(at end: Date) {
+        autoStopTask?.cancel()
+        let seconds = max(0, end.timeIntervalSinceNow)
+        autoStopTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled, let self, self.mode == .meeting else { return }
+            await self.endMeeting()
+        }
+    }
+
     func endMeeting() async {
         guard mode == .meeting, let session = recordingSession else { return }
+        autoStopTask?.cancel()
+        autoStopTask = nil
         mode = .standby
         recordingSession = nil
         recordingStartedAt = nil
@@ -117,15 +140,6 @@ final class AppState {
         updated.actionItems = result.actionItems
         try store.save(updated)
         return updated
-    }
-
-    /// Generate a follow-up recap message (e-mail/Slack) for a saved meeting. Returns plain text.
-    func generateFollowUp(for meeting: Meeting, tone: FollowUpDrafter.Tone) async throws -> String {
-        try await FollowUpDrafter.draft(
-            transcript: meeting.fullTranscriptText,
-            calendarContext: Self.calendarContext(for: meeting),
-            tone: tone
-        )
     }
 
     private static func calendarContext(for meeting: Meeting) -> String? {
