@@ -9,34 +9,40 @@ struct OnboardingView: View {
     var onFinished: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Bem-vindo ao Transcribe").font(.title2).bold()
-                Text("Antes de começar, precisamos de três permissões do macOS.")
+                Text("Antes de começar, precisamos de quatro permissões do macOS.")
                     .foregroundStyle(.secondary)
             }
 
-            row(
-                title: "Microfone",
-                detail: "Grava sua fala durante as reuniões.",
-                status: permissions.microphone
-            ) { Task { await permissions.requestMicrophone() } }
+            List {
+                row(
+                    icon: "mic.fill",
+                    title: "Microfone",
+                    detail: "Grava sua fala durante as reuniões.",
+                    status: permissions.microphone
+                ) { Task { await permissions.requestMicrophone() } }
 
-            row(
-                title: "Reconhecimento de fala",
-                detail: "Transcreve o áudio no dispositivo.",
-                status: permissions.speechRecognition
-            ) { Task { await permissions.requestSpeechRecognition() } }
+                row(
+                    icon: "waveform",
+                    title: "Reconhecimento de fala",
+                    detail: "Transcreve o áudio no dispositivo.",
+                    status: permissions.speechRecognition
+                ) { Task { await permissions.requestSpeechRecognition() } }
 
-            row(
-                title: "Calendário",
-                detail: "Sugere gravação quando uma reunião com link está prestes a começar.",
-                status: permissions.calendar
-            ) { Task { await permissions.requestCalendar() } }
+                row(
+                    icon: "calendar",
+                    title: "Calendário",
+                    detail: "Sugere gravação quando uma reunião com link está prestes a começar.",
+                    status: permissions.calendar
+                ) { Task { await permissions.requestCalendar() } }
 
-            screenRecordingRow
-
-            Spacer()
+                screenRecordingRow
+            }
+            .listStyle(.bordered(alternatesRowBackgrounds: true))
+            .scrollDisabled(true)
+            .frame(height: 250)
 
             HStack {
                 if [permissions.microphone, permissions.speechRecognition, permissions.calendar, permissions.screenRecording].contains(.denied) {
@@ -45,32 +51,47 @@ struct OnboardingView: View {
                 Spacer()
                 Button("Continuar") { onFinished() }
                     .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
                     .disabled(!permissions.allGranted)
             }
         }
         .padding(24)
-        .frame(minWidth: 460, minHeight: 380)
+        .frame(minWidth: 480, minHeight: 460)
         .onAppear { permissions.refresh() }
     }
 
-    private func row(title: String, detail: String, status: PermissionStatus, request: @escaping () -> Void) -> some View {
-        HStack(alignment: .top) {
+    private func row(icon: String, title: String, detail: String, status: PermissionStatus, request: @escaping () -> Void) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline)
                 Text(detail).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            switch status {
-            case .granted:
-                Label("Permitido", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .labelStyle(.iconOnly)
-            case .denied:
-                Button("Negado — abrir Ajustes") { openPrivacySettings() }
-                    .foregroundStyle(.red)
-            case .notDetermined:
-                Button("Permitir", action: request)
+            statusControl(status, request: request)
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func statusControl(_ status: PermissionStatus, request: @escaping () -> Void) -> some View {
+        switch status {
+        case .granted:
+            Label("Permitido", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                .labelStyle(.iconOnly)
+        case .denied:
+            HStack(spacing: 6) {
+                Text("Negado").font(.caption).foregroundStyle(.red)
+                Button("Abrir Ajustes", action: openPrivacySettings)
+                    .controlSize(.small)
             }
+        case .notDetermined:
+            Button("Permitir", action: request)
+                .controlSize(.small)
         }
     }
 
@@ -79,7 +100,11 @@ struct OnboardingView: View {
     /// keeps reporting the old (denied) state until the app is relaunched — it's not a bug in our check.
     private var screenRecordingRow: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "rectangle.on.rectangle")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Gravação de tela").font(.headline)
                     Text("Necessária para capturar o áudio do sistema (os outros participantes), mesmo sem gravar vídeo.")
@@ -93,6 +118,7 @@ struct OnboardingView: View {
                         .labelStyle(.iconOnly)
                 } else {
                     Button("Permitir") { permissions.requestScreenRecording() }
+                        .controlSize(.small)
                 }
             }
             if permissions.screenRecording != .granted {
@@ -103,8 +129,10 @@ struct OnboardingView: View {
                     Button("Reiniciar o Transcribe") { relaunchApp() }
                         .font(.caption2)
                 }
+                .padding(.leading, 32)
             }
         }
+        .padding(.vertical, 4)
     }
 
     private func openPrivacySettings() {

@@ -6,58 +6,59 @@ struct MeetingDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 TextField("Título", text: $meeting.title)
                     .font(.title2.bold())
                     .textFieldStyle(.plain)
 
                 if !meeting.participants.isEmpty {
-                    Text(meeting.participants.joined(separator: ", "))
+                    Label(meeting.participants.joined(separator: ", "), systemImage: "person.2")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
 
                 if !meeting.summaryBullets.isEmpty {
-                    section("Resumo") {
-                        ForEach(meeting.summaryBullets, id: \.self) { bullet in
-                            Label(bullet, systemImage: "circle.fill")
-                                .imageScale(.small)
+                    GroupBox("Resumo") {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(meeting.summaryBullets, id: \.self) { bullet in
+                                Label(bullet, systemImage: "circle.fill")
+                                    .imageScale(.small)
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 4)
                     }
                 }
 
                 if !meeting.actionItems.isEmpty {
-                    section("Ações") {
-                        ForEach(meeting.actionItems, id: \.self) { item in
-                            Label(item, systemImage: "checkmark.circle")
+                    GroupBox("Ações") {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(meeting.actionItems, id: \.self) { item in
+                                Label(item, systemImage: "checkmark.circle")
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 4)
                     }
                 }
 
-                section("Transcrição") {
+                GroupBox("Transcrição") {
                     TextEditor(text: $meeting.editableTranscriptText)
                         .font(.body)
+                        .scrollContentBackground(.hidden)
                         .frame(minHeight: 300)
+                        .padding(.top, 4)
                 }
             }
             .padding()
         }
         .toolbar {
             ToolbarItem {
-                Button("Salvar") {
+                Button("Salvar", systemImage: "square.and.arrow.down") {
                     try? appState.store.save(meeting)
                 }
+                .keyboardShortcut("s", modifiers: .command)
             }
-        }
-    }
-
-    private func section<Content: View>(
-        _ title: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.headline)
-            content()
         }
     }
 }
