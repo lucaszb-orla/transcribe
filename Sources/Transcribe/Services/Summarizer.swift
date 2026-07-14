@@ -24,7 +24,7 @@ enum Summarizer {
         }
     }
 
-    static func summarize(transcript: String, calendarContext: String?) async throws -> MeetingSummary {
+    static func summarize(transcript: String, calendarContext: String?, options: SummaryOptions) async throws -> SummaryResult {
         let model = SystemLanguageModel.default
         guard case .available = model.availability else {
             if case .unavailable(let reason) = model.availability {
@@ -34,7 +34,7 @@ enum Summarizer {
         }
 
         let session = LanguageModelSession(model: model) {
-            "Você resume transcrições de reuniões de trabalho em português do Brasil, de forma objetiva e sem inventar informação que não está no texto."
+            instructions(options)
         }
 
         var prompt = "Transcrição da reunião:\n\(transcript)"
@@ -42,7 +42,42 @@ enum Summarizer {
             prompt = "Contexto do evento de calendário: \(calendarContext)\n\n\(prompt)"
         }
 
-        let response = try await session.respond(to: prompt, generating: MeetingSummary.self)
-        return response.content
+        switch options.format {
+        case .bullets:
+            let r = try await session.respond(to: prompt, generating: GeneratedBulletSummary.self).content
+            return SummaryResult(
+                title: r.title,
+                bullets: r.bullets,
+                prose: nil,
+                actionItems: options.includeActionItems ? r.actionItems : []
+            )
+        case .prose:
+            let r = try await session.respond(to: prompt, generating: GeneratedProseSummary.self).content
+            return SummaryResult(
+                title: r.title,
+                bullets: [],
+                prose: r.prose,
+                actionItems: options.includeActionItems ? r.actionItems : []
+            )
+        }
+    }
+
+    private static func instructions(_ options: SummaryOptions) -> String {
+        var lines = [
+            "Você resume transcrições de reuniões de trabalho em português do Brasil, de forma objetiva e sem inventar informação que não está no texto."
+        ]
+        lines.append(options.format == .bullets
+            ? "Escreva o resumo como tópicos curtos."
+            : "Escreva o resumo como prosa corrida.")
+        if options.includeActionItems {
+            lines.append("Extraia também os itens de ação (tarefas combinadas). Se não houver nenhum, devolva a lista vazia.")
+        } else {
+            lines.append("Não é necessário extrair itens de ação.")
+        }
+        let custom = options.customInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !custom.isEmpty {
+            lines.append("Instruções adicionais do usuário: \(custom)")
+        }
+        return lines.joined(separator: " ")
     }
 }

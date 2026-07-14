@@ -39,8 +39,10 @@ final class MeetingStore {
         reload()
     }
 
+    /// Moves the meeting's file to the Trash rather than deleting it outright, so a mis-click
+    /// is recoverable — matches the HIG preference for undo-able actions over confirmation alerts.
     func delete(_ meeting: Meeting) throws {
-        try FileManager.default.removeItem(at: fileURL(for: meeting))
+        try FileManager.default.trashItem(at: fileURL(for: meeting), resultingItemURL: nil)
         reload()
     }
 

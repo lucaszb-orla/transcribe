@@ -21,6 +21,14 @@ struct MeetingListView: View {
                 }
                 .padding(.vertical, 2)
                 .tag(meeting)
+                .contextMenu {
+                    Button("Excluir", systemImage: "trash", role: .destructive) {
+                        delete(meeting)
+                    }
+                }
+            }
+            .onDeleteCommand {
+                if let selection { delete(selection) }
             }
             .searchable(text: $query, prompt: "Buscar por título ou transcrição")
             .navigationTitle("Reuniões")
@@ -33,18 +41,25 @@ struct MeetingListView: View {
             }
             .overlay {
                 if appState.store.search(query).isEmpty {
-                    ContentUnavailableView(
-                        query.isEmpty ? "Nenhuma reunião ainda" : "Nenhum resultado",
-                        systemImage: query.isEmpty ? "waveform" : "magnifyingglass",
-                        description: Text(query.isEmpty
-                            ? "Inicie uma gravação para ver a transcrição aqui."
-                            : "Tente buscar por outro título ou trecho da transcrição.")
-                    )
+                    if query.isEmpty {
+                        ContentUnavailableView {
+                            Label("Nenhuma reunião ainda", systemImage: "waveform")
+                        } description: {
+                            Text("Inicie uma gravação para ver a transcrição e o resumo aqui.")
+                        } actions: {
+                            Button("Nova transcrição", systemImage: "record.circle") {
+                                Task { await appState.startMeeting() }
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    } else {
+                        ContentUnavailableView.search(text: query)
+                    }
                 }
             }
         } detail: {
             if let selection {
-                MeetingDetailView(meeting: selection)
+                MeetingDetailView(meeting: selection, onDelete: { self.selection = nil })
                     .id(selection.id)
             } else {
                 ContentUnavailableView(
@@ -62,6 +77,25 @@ struct MeetingListView: View {
             Button("Fechar") {}
         } message: {
             Text(appState.errorMessage ?? "")
+        }
+        .onAppear { selectPendingReview() }
+        .onChange(of: appState.pendingReviewMeetingID) { selectPendingReview() }
+    }
+
+    /// After a recording ends, jump straight to the new meeting so the user can choose summary options.
+    private func selectPendingReview() {
+        guard let id = appState.pendingReviewMeetingID,
+              let meeting = appState.store.meetings.first(where: { $0.id == id }) else { return }
+        selection = meeting
+        appState.pendingReviewMeetingID = nil
+    }
+
+    private func delete(_ meeting: Meeting) {
+        if selection?.id == meeting.id { selection = nil }
+        do {
+            try appState.store.delete(meeting)
+        } catch {
+            appState.errorMessage = "Não foi possível excluir a reunião: \(error.localizedDescription)"
         }
     }
 }

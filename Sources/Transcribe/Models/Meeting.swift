@@ -15,8 +15,14 @@ struct Meeting: Codable, Identifiable, Hashable {
     var participants: [String]
     var transcript: [TranscriptSegment]
     var summaryBullets: [String]
+    var summaryProse: String? = nil
     var actionItems: [String]
     var audioFileName: String?
+
+    /// True once a summary has been generated (either format).
+    var hasSummary: Bool {
+        !summaryBullets.isEmpty || !(summaryProse ?? "").isEmpty
+    }
 
     var fullTranscriptText: String {
         transcript.map(\.text).joined(separator: " ")

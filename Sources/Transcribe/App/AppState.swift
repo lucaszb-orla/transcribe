@@ -20,6 +20,7 @@ final class AppState {
     let store = MeetingStore()
     let permissions = PermissionsManager()
     let settings = AppSettings()
+    let summaryPresets = SummaryPresetStore()
 
     private var recordingSession: RecordingSession?
     private var pendingSuggestion: MeetingSuggestion?
@@ -30,6 +31,8 @@ final class AppState {
     var isPaused: Bool { recordingSession?.state == .paused }
     var micLevel: Float { recordingSession?.micLevel ?? 0 }
     var recordingStartedAt: Date?
+    /// Set when a recording just ended, so the list can jump to it for summary review.
+    var pendingReviewMeetingID: UUID?
 
     init() {
         Task { await self.start() }
@@ -77,27 +80,10 @@ final class AppState {
         recordingStartedAt = nil
 
         let (segments, startedAt, endedAt) = await session.stop()
-        let transcriptText = segments.map(\.text).joined(separator: " ")
 
-        var title = pendingSuggestion?.title ?? "Reunião de \(startedAt.formatted(date: .abbreviated, time: .shortened))"
-        var summaryBullets: [String] = []
-        var actionItems: [String] = []
-
-        if !transcriptText.isEmpty {
-            do {
-                let calendarContext = pendingSuggestion.map {
-                    "Título: \($0.title), participantes: \($0.participants.joined(separator: ", "))"
-                }
-                let summary = try await Summarizer.summarize(transcript: transcriptText, calendarContext: calendarContext)
-                title = summary.title
-                summaryBullets = summary.bullets
-                actionItems = summary.actionItems
-            } catch {
-                logger.error("summarize failed: \(String(describing: error), privacy: .public)")
-                errorMessage = "Transcrição salva, mas o resumo automático falhou: \(error.localizedDescription)"
-            }
-        }
-
+        // Save the transcript immediately; summarization is now on-demand (the detail view asks the
+        // user which format/options they want) so nothing is lost even if they never summarize.
+        let title = pendingSuggestion?.title ?? "Reunião de \(startedAt.formatted(date: .abbreviated, time: .shortened))"
         let meeting = Meeting(
             title: title,
             startedAt: startedAt,
@@ -105,12 +91,49 @@ final class AppState {
             calendarEventTitle: pendingSuggestion?.title,
             participants: pendingSuggestion?.participants ?? [],
             transcript: segments,
-            summaryBullets: summaryBullets,
-            actionItems: actionItems,
+            summaryBullets: [],
+            actionItems: [],
             audioFileName: nil
         )
 
         try? store.save(meeting)
+        pendingReviewMeetingID = meeting.id
         pendingSuggestion = nil
+    }
+
+    /// Generate (or regenerate) a summary for a saved meeting with the user's chosen options.
+    /// Returns the updated, saved meeting.
+    func generateSummary(for meeting: Meeting, options: SummaryOptions) async throws -> Meeting {
+        let result = try await Summarizer.summarize(
+            transcript: meeting.fullTranscriptText,
+            calendarContext: Self.calendarContext(for: meeting),
+            options: options
+        )
+
+        var updated = meeting
+        if !result.title.isEmpty { updated.title = result.title }
+        updated.summaryBullets = result.bullets
+        updated.summaryProse = result.prose
+        updated.actionItems = result.actionItems
+        try store.save(updated)
+        return updated
+    }
+
+    /// Generate a follow-up recap message (e-mail/Slack) for a saved meeting. Returns plain text.
+    func generateFollowUp(for meeting: Meeting, tone: FollowUpDrafter.Tone) async throws -> String {
+        try await FollowUpDrafter.draft(
+            transcript: meeting.fullTranscriptText,
+            calendarContext: Self.calendarContext(for: meeting),
+            tone: tone
+        )
+    }
+
+    private static func calendarContext(for meeting: Meeting) -> String? {
+        let parts = meeting.participants
+        let eventTitle = meeting.calendarEventTitle
+        if eventTitle == nil, parts.isEmpty { return nil }
+        var ctx = "Título: \(eventTitle ?? meeting.title)"
+        if !parts.isEmpty { ctx += ", participantes: \(parts.joined(separator: ", "))" }
+        return ctx
     }
 }
