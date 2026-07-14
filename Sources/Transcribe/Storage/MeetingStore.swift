@@ -1,0 +1,63 @@
+import Foundation
+import Observation
+
+/// Local-only persistence: one JSON file per meeting under Application Support.
+/// No sync, no backend — see PRD "Armazenamento".
+@Observable
+final class MeetingStore {
+    private(set) var meetings: [Meeting] = []
+
+    private let directory: URL
+
+    init() {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        directory = base.appendingPathComponent("Transcribe/Meetings", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        reload()
+    }
+
+    func reload() {
+        let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil))
+            ?? []
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        meetings = files
+            .filter { $0.pathExtension == "json" }
+            .compactMap { url in
+                (try? Data(contentsOf: url)).flatMap { try? decoder.decode(Meeting.self, from: $0) }
+            }
+            .sorted { $0.startedAt > $1.startedAt }
+    }
+
+    func save(_ meeting: Meeting) throws {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(meeting)
+        try data.write(to: fileURL(for: meeting), options: .atomic)
+        reload()
+    }
+
+    func delete(_ meeting: Meeting) throws {
+        try FileManager.default.removeItem(at: fileURL(for: meeting))
+        reload()
+    }
+
+    func search(_ query: String) -> [Meeting] {
+        guard !query.isEmpty else { return meetings }
+        let lowered = query.lowercased()
+        return meetings.filter {
+            $0.title.lowercased().contains(lowered) || $0.fullTranscriptText.lowercased().contains(lowered)
+        }
+    }
+
+    /// Where a meeting's optional raw audio recording is stored, if the user opts to keep it.
+    func audioFileURL(fileName: String) -> URL {
+        directory.appendingPathComponent(fileName)
+    }
+
+    private func fileURL(for meeting: Meeting) -> URL {
+        directory.appendingPathComponent("\(meeting.id.uuidString).json")
+    }
+}

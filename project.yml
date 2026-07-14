@@ -1,0 +1,53 @@
+name: Transcribe
+options:
+  bundleIdPrefix: com.lucasbaggiotto
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5"
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+    ENABLE_HARDENED_RUNTIME: NO
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: 7QTC8MU95P
+targets:
+  Transcribe:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/Transcribe
+    info:
+      path: Sources/Transcribe/Info.plist
+      properties:
+        NSMicrophoneUsageDescription: "Transcribe precisa do microfone para gravar sua fala durante as reuniões."
+        NSCalendarsFullAccessUsageDescription: "Transcribe lê seu Calendário para sugerir o início da gravação quando uma reunião com link de chamada está prestes a começar."
+        NSSpeechRecognitionUsageDescription: "Transcribe usa reconhecimento de fala on-device para transcrever suas reuniões."
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lucasbaggiotto.Transcribe
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+  TranscribeTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/TranscribeTests
+    dependencies:
+      - target: Transcribe
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lucasbaggiotto.TranscribeTests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Transcribe:
+    build:
+      targets:
+        Transcribe: all
+        TranscribeTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - TranscribeTests
