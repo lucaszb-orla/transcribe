@@ -45,10 +45,13 @@ struct OnboardingView: View {
 
             HStack {
                 Spacer()
-                Button("Continuar") { onFinished() }
+                Button("Continuar") {
+                    permissions.completeOnboarding()
+                    onFinished()
+                }
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
-                    .disabled(!permissions.allGranted)
+                    .disabled(!permissions.requiredGranted)
             }
         }
         .padding(24)

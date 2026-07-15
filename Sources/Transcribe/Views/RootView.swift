@@ -9,12 +9,12 @@ struct RootView: View {
     var body: some View {
         content
             .animation(.smooth(duration: 0.35), value: appState.mode)
-            .animation(.smooth(duration: 0.35), value: permissions.allGranted)
+            .animation(.smooth(duration: 0.35), value: permissions.needsOnboarding)
     }
 
     @ViewBuilder
     private var content: some View {
-        if !permissions.allGranted {
+        if permissions.needsOnboarding {
             OnboardingView { permissions.refresh() }
                 .transition(.opacity)
         } else if appState.mode == .meeting {

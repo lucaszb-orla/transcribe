@@ -78,8 +78,8 @@ final class AppState {
 
     private func ensurePermissions() -> Bool {
         permissions.refresh()
-        guard permissions.allGranted else {
-            errorMessage = "Conceda acesso ao microfone, reconhecimento de fala, calendário e gravação de tela antes de gravar."
+        guard permissions.requiredGranted else {
+            errorMessage = "Conceda acesso ao microfone, reconhecimento de fala e gravação de tela antes de gravar."
             return false
         }
         return true
