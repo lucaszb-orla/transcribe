@@ -20,7 +20,8 @@ struct RecordingView: View {
         .animation(.smooth, value: appState.isPaused)
         .animation(.smooth, value: appState.liveText.isEmpty)
         .onReceive(timer) { date in
-            withAnimation(.snappy(duration: 0.3)) { now = date }
+            if reduceMotion { now = date }
+            else { withAnimation(.snappy(duration: 0.3)) { now = date } }
         }
     }
 
@@ -34,7 +35,7 @@ struct RecordingView: View {
                     .animation(appState.isPaused || reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(), value: pulse)
                 Text(appState.isPaused ? "Pausado" : "Gravando")
                     .font(.headline)
-                    .contentTransition(.numericText())
+                    .contentTransition(.opacity)
                 Spacer()
                 Text(elapsed)
                     .font(.system(.title3, design: .monospaced))

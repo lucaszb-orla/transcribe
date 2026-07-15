@@ -17,7 +17,6 @@ struct MeetingDetailView: View {
     @State private var newPresetName = ""
     @State private var confirmDelete = false
 
-    @State private var optionsExpanded = true
     @State private var summaryExpanded = true
     @State private var actionsExpanded = true
     @State private var transcriptExpanded = false
@@ -124,6 +123,7 @@ struct MeetingDetailView: View {
                 .buttonStyle(.borderless)
                 .controlSize(.small)
                 .labelStyle(.iconOnly)
+                .help("Refazer resumo")
             } content: {
                 if let prose = meeting.summaryProse, !prose.isEmpty {
                     Text(prose)
@@ -133,10 +133,7 @@ struct MeetingDetailView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(meeting.summaryBullets, id: \.self) { bullet in
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Image(systemName: "circle.fill")
-                                    .font(.system(size: 5))
-                                    .foregroundStyle(.tertiary)
-                                    .padding(.top, 6)
+                                Text("•").foregroundStyle(.tertiary)
                                 Text(bullet).textSelection(.enabled)
                             }
                         }
@@ -151,10 +148,10 @@ struct MeetingDetailView: View {
     }
 
     private var summaryOptionsForm: some View {
-        section("Gerar resumo", systemImage: "sparkles", isExpanded: $optionsExpanded) {
-            EmptyView()
-        } content: {
-            VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Resumo", systemImage: "sparkles").font(.headline)
+
+            Group {
                 Picker("Modelo", selection: $selectedPresetID) {
                     Text("Personalizado").tag(UUID?.none)
                     ForEach(appState.summaryPresets.presets) { preset in
@@ -202,7 +199,6 @@ struct MeetingDetailView: View {
                         newPresetName = ""
                         showSavePreset = true
                     }
-                    .controlSize(.small)
                     Spacer()
                     Button {
                         Task { await generate() }
@@ -210,7 +206,7 @@ struct MeetingDetailView: View {
                         if summarizing {
                             ProgressView().controlSize(.small)
                         } else {
-                            Label("Gerar resumo", systemImage: "sparkles")
+                            Label("Gerar", systemImage: "sparkles")
                         }
                     }
                     .buttonStyle(.borderedProminent)
@@ -218,7 +214,6 @@ struct MeetingDetailView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(6)
         }
         .alert("Salvar preset", isPresented: $showSavePreset) {
             TextField("Nome do preset", text: $newPresetName)

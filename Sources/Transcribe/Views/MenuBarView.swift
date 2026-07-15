@@ -57,12 +57,12 @@ struct MenuBarView: View {
         Label(statusText, systemImage: statusIcon)
             .font(.headline)
             .foregroundStyle(statusColor)
-            .symbolEffect(.pulse, isActive: appState.mode == .meeting && !appState.isPaused)
+            .symbolEffect(.pulse, isActive: appState.mode == .meeting && !appState.isPaused && !reduceMotion)
     }
 
     private var statusText: String {
-        guard appState.mode == .meeting else { return "Em standby" }
-        return appState.isPaused ? "Gravação pausada" : "Gravando reunião"
+        guard appState.mode == .meeting else { return "Em espera" }
+        return appState.isPaused ? "Pausado" : "Gravando"
     }
 
     private var statusIcon: String {
@@ -82,7 +82,7 @@ struct MenuBarView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack {
-                Button("Iniciar gravação") {
+                Button("Iniciar transcrição") {
                     Task { await appState.startMeeting(from: suggestion) }
                 }
                 .buttonStyle(.borderedProminent)
@@ -102,18 +102,27 @@ struct MenuBarView: View {
     private var actionButton: some View {
         if appState.mode == .meeting {
             if appState.isPaused {
-                Button("Retomar gravação", systemImage: "play.circle") {
+                Button("Retomar transcrição", systemImage: "play.circle") {
                     appState.resumeMeeting()
                 }
+                .buttonStyle(.borderedProminent)
             } else {
-                Button("Pausar gravação", systemImage: "pause.circle") {
+                Button("Pausar transcrição", systemImage: "pause.circle") {
                     appState.pauseMeeting()
                 }
+                .buttonStyle(.borderedProminent)
             }
             Button("Encerrar transcrição", systemImage: "stop.circle") {
                 confirmEnd = true
             }
             .tint(.red)
+        } else if appState.suggestion == nil {
+            // Primary action in standby — the calendar suggestion banner already carries a prominent
+            // CTA, so only emphasize here when there's no banner (avoids two competing blue buttons).
+            Button("Nova transcrição", systemImage: "record.circle") {
+                Task { await appState.startMeeting() }
+            }
+            .buttonStyle(.borderedProminent)
         } else {
             Button("Nova transcrição", systemImage: "record.circle") {
                 Task { await appState.startMeeting() }

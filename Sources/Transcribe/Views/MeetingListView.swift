@@ -31,7 +31,7 @@ struct MeetingListView: View {
             .onDeleteCommand {
                 if let selection { pendingDelete = selection }
             }
-            .searchable(text: $query, prompt: "Buscar por título ou transcrição")
+            .searchable(text: $query, placement: .sidebar, prompt: "Buscar por título ou transcrição")
             .navigationTitle("Reuniões")
             .safeAreaInset(edge: .bottom) {
                 Button("Nova transcrição", systemImage: "record.circle") {
@@ -44,11 +44,6 @@ struct MeetingListView: View {
             }
             .toolbar {
                 ToolbarItem {
-                    Button("Nova transcrição", systemImage: "record.circle") {
-                        Task { await appState.startMeeting() }
-                    }
-                }
-                ToolbarItem {
                     SettingsLink {
                         Label("Ajustes", systemImage: "gearshape")
                     }
@@ -60,12 +55,7 @@ struct MeetingListView: View {
                         ContentUnavailableView {
                             Label("Nenhuma reunião ainda", systemImage: "waveform")
                         } description: {
-                            Text("Inicie uma gravação para ver a transcrição e o resumo aqui.")
-                        } actions: {
-                            Button("Nova transcrição", systemImage: "record.circle") {
-                                Task { await appState.startMeeting() }
-                            }
-                            .buttonStyle(.borderedProminent)
+                            Text("Toque em “Nova transcrição” para gravar sua primeira reunião.")
                         }
                     } else {
                         ContentUnavailableView {

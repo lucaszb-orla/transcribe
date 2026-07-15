@@ -12,7 +12,7 @@ struct SettingsView: View {
         @Bindable var settings = appState.settings
 
         Form {
-            Section("Microfone") {
+            Section {
                 Picker("Entrada de áudio", selection: $settings.selectedInputUID) {
                     Text("Padrão do sistema").tag(String?.none)
                     ForEach(devices) { device in
@@ -20,30 +20,31 @@ struct SettingsView: View {
                     }
                 }
                 .pickerStyle(.menu)
-
+            } header: {
+                Text("Microfone")
+            } footer: {
                 Text("O áudio do sistema (outros participantes) é capturado à parte via gravação de tela.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
-            Section("Idioma da transcrição") {
+            Section {
                 Picker("Idioma", selection: $settings.transcriptionLocaleID) {
                     ForEach(localeOptions, id: \.id) { option in
                         Text(option.name).tag(option.id)
                     }
                 }
                 .pickerStyle(.menu)
-
+            } header: {
+                Text("Idioma da transcrição")
+            } footer: {
                 Text("A transcrição on-device espera este idioma. Fale nele para melhores resultados.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
-            Section("Calendário") {
+            Section {
                 Toggle("Iniciar e encerrar gravação automaticamente", isOn: $settings.autoRecordFromCalendar)
+            } header: {
+                Text("Calendário")
+            } footer: {
                 Text("Grava sozinho quando uma reunião do calendário com link de chamada começa e para no fim do evento — sem precisar clicar.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
             Section("Presets de resumo") {
@@ -72,7 +73,11 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(minWidth: 480, minHeight: 460)
+        // Resizable within sensible bounds — a fixed frame made the Settings window non-resizable.
+        .frame(
+            minWidth: 460, idealWidth: 520, maxWidth: 720,
+            minHeight: 420, idealHeight: 520, maxHeight: 820
+        )
         .task {
             devices = AudioDevices.inputDevices()
             locales = (try? await SpeechTranscriber.supportedLocales) ?? []
@@ -106,11 +111,11 @@ struct SettingsView: View {
         var ids = locales.map { $0.identifier(.bcp47) }
         let selected = appState.settings.transcriptionLocaleID
         if !ids.contains(selected) { ids.insert(selected, at: 0) }
-        let display = Locale.current
+        let display = Locale(identifier: "pt_BR")
         return ids
             .sorted()
             .map { id in
-                (id: id, name: display.localizedString(forIdentifier: id).map { "\($0) (\(id))" } ?? id)
+                (id: id, name: display.localizedString(forIdentifier: id) ?? id)
             }
     }
 }

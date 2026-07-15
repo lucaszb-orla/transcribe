@@ -16,37 +16,34 @@ struct OnboardingView: View {
                     .foregroundStyle(.secondary)
             }
 
-            List {
+            VStack(alignment: .leading, spacing: 0) {
                 row(
                     icon: "mic.fill",
                     title: "Microfone",
                     detail: "Grava sua fala durante as reuniões.",
                     status: permissions.microphone
                 ) { Task { await permissions.requestMicrophone() } }
-
+                Divider()
                 row(
                     icon: "waveform",
                     title: "Reconhecimento de fala",
                     detail: "Transcreve o áudio no dispositivo.",
                     status: permissions.speechRecognition
                 ) { Task { await permissions.requestSpeechRecognition() } }
-
+                Divider()
                 row(
                     icon: "calendar",
                     title: "Calendário",
                     detail: "Sugere gravação quando uma reunião com link está prestes a começar.",
                     status: permissions.calendar
                 ) { Task { await permissions.requestCalendar() } }
-
+                Divider()
                 screenRecordingRow
             }
-            .listStyle(.bordered(alternatesRowBackgrounds: true))
-            .frame(height: 250)
+
+            Spacer(minLength: 0)
 
             HStack {
-                if [permissions.microphone, permissions.speechRecognition, permissions.calendar, permissions.screenRecording].contains(.denied) {
-                    Button("Abrir Ajustes do Sistema") { openPrivacySettings() }
-                }
                 Spacer()
                 Button("Continuar") { onFinished() }
                     .buttonStyle(.borderedProminent)
@@ -98,38 +95,30 @@ struct OnboardingView: View {
     /// so if you grant it in System Settings while Transcribe is already running, `CGPreflightScreenCaptureAccess`
     /// keeps reporting the old (denied) state until the app is relaunched — it's not a bug in our check.
     private var screenRecordingRow: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "rectangle.on.rectangle")
-                    .font(.title3)
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "rectangle.on.rectangle")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Gravação de tela").font(.headline)
+                Text("Necessária para capturar o áudio do sistema (os outros participantes), mesmo sem gravar vídeo.")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                    .frame(width: 20)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Gravação de tela").font(.headline)
-                    Text("Necessária para capturar o áudio do sistema (os outros participantes), mesmo sem gravar vídeo.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if permissions.screenRecording == .granted {
-                    Label("Permitido", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                        .labelStyle(.iconOnly)
-                } else {
-                    Button("Permitir") { permissions.requestScreenRecording() }
-                        .controlSize(.small)
+                if permissions.screenRecording != .granted {
+                    HStack(spacing: 6) {
+                        Text("Já ativou em Ajustes do Sistema e continua pendente aqui?")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Button("Reiniciar o Transcribe") { relaunchApp() }
+                            .buttonStyle(.link)
+                            .font(.caption2)
+                    }
+                    .padding(.top, 4)
                 }
             }
-            if permissions.screenRecording != .granted {
-                HStack(spacing: 6) {
-                    Text("Já ativou em Ajustes do Sistema e continua marcado como pendente aqui?")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Button("Reiniciar o Transcribe") { relaunchApp() }
-                        .font(.caption2)
-                }
-                .padding(.leading, 32)
-            }
+            Spacer()
+            statusControl(permissions.screenRecording) { permissions.requestScreenRecording() }
         }
         .padding(.vertical, 4)
     }
