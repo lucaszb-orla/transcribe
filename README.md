@@ -50,8 +50,13 @@ xcodebuild -project Transcribe.xcodeproj -scheme Transcribe -configuration Debug
 
 ## 🔑 Permissões
 
-Pedidas no onboarding: **Microfone**, **Reconhecimento de fala**, **Calendário** e **Gravação de tela**
-(esta última é o que o macOS exige para capturar o áudio do sistema, mesmo sem gravar vídeo).
+O onboarding pede, uma por vez, as três permissões essenciais para gravar: **Microfone**,
+**Reconhecimento de fala** e **Gravação de tela** (esta última é o que o macOS exige para capturar o
+áudio do sistema, mesmo sem gravar vídeo).
+
+O **Calendário é opcional** e aparece só depois das três essenciais. Dá para pular sem bloquear a
+gravação; o Transcribe nunca abre esse prompt sozinho. Depois, a integração pode ser conectada pelo
+aviso na lista de reuniões ou pelos Ajustes.
 
 ## 🗂️ Arquitetura
 

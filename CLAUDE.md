@@ -64,30 +64,46 @@ Sources/Transcribe/
     SummaryPresets.swift    # presets nomeados de SummaryOptions (persistidos)
     CalendarMonitor.swift   # EventKit: sugere reunião a começar
     CallLinkDetector.swift  # detecta link de chamada em evento do calendário
-    PermissionsManager.swift# mic / fala / calendário / gravação de tela
+    PermissionsManager.swift# 3 acessos essenciais + Calendário opcional + conclusão do onboarding
     AudioDevices.swift      # enumera dispositivos de entrada (Core Audio) + AppSettings
     MeetingExporter.swift   # Markdown/texto, copiar, exportar arquivo, salvamento automático em pasta
   Storage/
     MeetingStore.swift      # persistência local: 1 JSON por reunião em Application Support
+  Shaders/
+    ChromeBorder.metal      # brilho cromado da orla do onboarding
   Views/
     RootView.swift          # gate de onboarding → RecordingView (gravando) ou MeetingListView
-    OnboardingView.swift    # concede as 4 permissões
+    OnboardingView.swift    # fluxo editorial: 3 acessos essenciais + Calendário opcional
+    OnboardingPermissionPanel.swift # etapa ativa, progresso 0/3...3/3 e ações de permissão
+    ChromeBorderView.swift  # orla cromada animada em Metal, com fallback estático acessível
     RecordingView.swift     # tela "Gravando": status, cronômetro, transcrição ao vivo, medidor de nível, pause/stop
     MeetingListView.swift   # lista + busca + excluir; abre a reunião recém-gravada
     MeetingDetailView.swift # título/participantes; gerar resumo (opções+presets); follow-up; transcrição editável; exportar
     SettingsView.swift      # ⌘,: microfone + idioma da transcrição
     MenuBarView.swift       # controles rápidos na barra de menu
-Tests/TranscribeTests/      # CallLinkDetectorTests
+Tests/TranscribeTests/      # CallLinkDetectorTests + PermissionPolicyTests
 ```
 
-**Fluxo:** Standby (monitorando calendário) ↔ Meeting (gravando). Ao encerrar, a transcrição é salva
-na hora; **o resumo é sob demanda** (o usuário escolhe formato/opções na tela da reunião).
+**Fluxo:** Standby (monitorando calendário somente quando conectado) ↔ Meeting (gravando). Ao
+encerrar, a transcrição é salva na hora; **o resumo é sob demanda** (o usuário escolhe
+formato/opções na tela da reunião).
 
 ## Permissões (TCC)
 
-Quatro, pedidas explicitamente no onboarding: **Microfone**, **Reconhecimento de fala**, **Calendário**,
-**Gravação de tela** (esta última necessária pro ScreenCaptureKit capturar o áudio do sistema, mesmo sem
-vídeo). A de gravação de tela só é reavaliada no launch: mudou nos Ajustes, precisa reiniciar o app.
+Três são essenciais e pedidas explicitamente, nessa ordem, no onboarding: **Microfone**,
+**Reconhecimento de fala** e **Gravação de tela**. A última é necessária pro ScreenCaptureKit capturar
+o áudio do sistema, mesmo sem vídeo, e só é reavaliada no launch: mudou nos Ajustes, precisa reiniciar
+o app.
+
+**Calendário é uma integração opcional.** Ele aparece depois de 3/3, pode ser pulado e nunca participa
+do gate de gravação. O único prompt de EventKit parte de uma ação explícita em
+`AppState.requestCalendarIntegration()`; launch, retorno ao foreground e monitoramento apenas
+sincronizam o status existente. Sem acesso, o monitor fica parado, a automação fica desativada e a
+lista mantém um aviso para conectar ou abrir os Ajustes.
+
+A conclusão do onboarding fica em `UserDefaults` (`onboardingCompleted`). Instalações anteriores que
+já têm os três acessos essenciais são migradas silenciosamente; revogar um essencial reabre o fluxo de
+recuperação mesmo se a conclusão já estiver salva.
 
 ## Armazenamento
 
@@ -96,7 +112,9 @@ disco** (por design). Nada de nuvem/sync.
 
 ## Feito até agora
 
-- Onboarding com as 4 permissões (+ botão de reiniciar pra gravação de tela).
+- Onboarding editorial com arte cromada, progresso 0/3...3/3 e orla Metal animada; pede os três
+  acessos essenciais em sequência, oferece Calendário como extra pulável e inclui fallback estático
+  para Reduzir Movimento/Aumentar Contraste.
 - Gravação: mic + áudio do sistema mixados no transcritor, **transcrição ao vivo**, **pause/retomar**,
   **medidor de nível** do microfone.
 - Ajustes: seleção de **microfone** e **idioma** (padrão pt-BR).
