@@ -29,6 +29,14 @@ open ~/Library/Developer/Xcode/DerivedData/Transcribe-*/Build/Products/Debug/Tra
 - Logs do app: `log show --predicate 'subsystem == "com.lucasbaggiotto.Transcribe"' --last 5m --info`
   (os `logger.debug` não persistem; use `.notice`/`.error` para depurar via `log show`).
 
+## Workflow com Claude Code
+
+- **Commitar a cada fix ou feature.** Não acumular várias mudanças num commit só — assim que uma
+  correção ou funcionalidade nova builda e roda, commita antes de seguir pra próxima coisa.
+- **Usar worktree separada por padrão.** Pra não dar conflito de arquivo quando há mais de uma tarefa
+  mexendo no repo ao mesmo tempo, cada tarefa nova roda em uma `git worktree` própria em vez de tudo
+  direto na working copy principal.
+
 ## Arquitetura
 
 ```
@@ -46,12 +54,12 @@ Sources/Transcribe/
     Transcriber.swift       # SpeechAnalyzer + resultados finais e "volatile" (ao vivo)
     CMSampleBuffer+PCM.swift # conversão de buffer do ScreenCaptureKit
     Summarizer.swift        # resumo via FoundationModels (bullets/prosa + itens de ação)
-    FollowUpDrafter.swift   # rascunho de e-mail/mensagem via FoundationModels
     SummaryPresets.swift    # presets nomeados de SummaryOptions (persistidos)
     CalendarMonitor.swift   # EventKit: sugere reunião a começar
     CallLinkDetector.swift  # detecta link de chamada em evento do calendário
     PermissionsManager.swift# mic / fala / calendário / gravação de tela
     AudioDevices.swift      # enumera dispositivos de entrada (Core Audio) + AppSettings
+    MeetingExporter.swift   # Markdown/texto, copiar, exportar arquivo, salvamento automático em pasta
   Storage/
     MeetingStore.swift      # persistência local: 1 JSON por reunião em Application Support
   Views/
@@ -93,8 +101,16 @@ disco** (por design). Nada de nuvem/sync.
 - **Auto-iniciar/encerrar pelo calendário** (opt-in em Ajustes): grava quando o evento com link começa e
   para no fim do evento. `MeetingSuggestion.end` + `CalendarMonitor.onNewCandidate` + auto-stop task no `AppState`.
 - **Exportar/compartilhar** (Markdown / texto / arquivo `.md`).
+- **Salvamento automático opcional** em Markdown numa pasta escolhida pelo usuário (Ajustes,
+  desativado por padrão) — a cada reunião encerrada, espelha o `.md` lá além do armazenamento próprio.
+- **Transcrição dividida por falante** ("Você" vs. "Participantes"): mic e áudio do sistema passam por
+  dois `Transcriber` separados, cada um tagueando seus segmentos — não é diarização de verdade (não
+  separa os participantes remotos entre si, que chegam misturados no áudio do sistema).
+- **Continuar transcrição** depois de encerrada, sem precisar criar uma reunião nova.
+- Confirmação antes de encerrar gravação ou apagar qualquer coisa (reunião, preset).
 - Lista com busca, excluir, e navegação automática pra reunião recém-gravada.
 - Ajustes acessível por botão visível (menu da barra + toolbar), além de ⌘,.
+- Ícone do app e ícone da menu bar (`quote.bubble` / `quote.bubble.fill` gravando).
 
 Nota: o "rascunho de follow-up" foi removido (não ficou bom). A ideia de direcionar a IA por
 linguagem natural continua no campo **Instruções adicionais** do resumo — sem toggles de tom.
@@ -111,9 +127,9 @@ linguagem natural continua no campo **Instruções adicionais** do resumo — se
 
 ## Próximos passos possíveis
 
-- Diarização (quem falou o quê) — hoje é um stream único mixado, sem separar falantes.
-- Itens de ação marcáveis/concluíveis (hoje são texto).
+- Diarização de verdade entre os participantes remotos (hoje só separa "Você" de "Participantes";
+  dentro de "Participantes" ainda é todo mundo misturado — exigiria modelo de embeddings/clustering,
+  dependência externa real, avaliado e descartado por ora).
 - Exportar PDF; enviar direto pra e-mail/Slack.
-- Gerenciar presets (renomear/editar/apagar) e salvar as opções atuais como novo preset.
-- Melhorar vocabulário (nomes próprios/siglas) — WhisperKit como fallback se a precisão não bastar.
-- Início/fim de gravação automáticos a partir do calendário.
+- Melhorar vocabulário (nomes próprios/siglas) — WhisperKit avaliado como fallback e descartado por
+  ora (sem streaming nativo e exigiria manter áudio em memória, já que o app não grava em disco).
