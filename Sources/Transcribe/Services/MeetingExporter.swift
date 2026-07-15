@@ -64,6 +64,17 @@ enum MeetingExporter {
         pb.setString(string, forType: .string)
     }
 
+    /// Writes the Markdown transcript straight to `folder`, no dialog — used by the opt-in
+    /// auto-export setting right after a meeting is saved.
+    @MainActor static func autoSave(_ meeting: Meeting, to folder: URL) {
+        let url = folder.appendingPathComponent(suggestedFilename(meeting))
+        do {
+            try markdown(meeting).write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            log.error("Falha ao salvar automaticamente: \(error.localizedDescription)")
+        }
+    }
+
     @MainActor static func exportToFile(_ meeting: Meeting) {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = suggestedFilename(meeting)

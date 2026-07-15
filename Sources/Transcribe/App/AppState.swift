@@ -158,6 +158,7 @@ final class AppState {
             updated.doneActionItems = nil
             do {
                 try store.save(updated)
+                maybeAutoExport(updated)
             } catch {
                 logger.error("failed to save continued meeting: \(String(describing: error), privacy: .public)")
                 errorMessage = "Não foi possível salvar a reunião continuada: \(error.localizedDescription)"
@@ -182,12 +183,21 @@ final class AppState {
 
         do {
             try store.save(meeting)
+            maybeAutoExport(meeting)
         } catch {
             logger.error("failed to save meeting: \(String(describing: error), privacy: .public)")
             errorMessage = "Não foi possível salvar a reunião: \(error.localizedDescription)"
         }
         pendingReviewMeetingID = meeting.id
         pendingSuggestion = nil
+    }
+
+    /// Opt-in (Ajustes > Salvamento automático): mirrors the just-saved transcript as a Markdown
+    /// file in the user's chosen folder. Best-effort — a failure here doesn't affect the meeting,
+    /// which is already safely stored in the app's own JSON store.
+    private func maybeAutoExport(_ meeting: Meeting) {
+        guard settings.autoExportEnabled, let folder = settings.autoExportFolderURL else { return }
+        MeetingExporter.autoSave(meeting, to: folder)
     }
 
     /// Generate (or regenerate) a summary for a saved meeting with the user's chosen options.

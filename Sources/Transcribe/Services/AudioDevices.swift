@@ -98,15 +98,34 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(autoRecordFromCalendar, forKey: Self.autoRecordKey) }
     }
 
+    /// Opt-in: mirror every saved transcript as a Markdown file in `autoExportFolderPath`. Off by
+    /// default — this is a local convenience export, not a replacement for the app's own storage.
+    var autoExportEnabled: Bool {
+        didSet { UserDefaults.standard.set(autoExportEnabled, forKey: Self.autoExportEnabledKey) }
+    }
+
+    /// Folder the user picked for auto-export (via NSOpenPanel); nil until they choose one.
+    var autoExportFolderPath: String? {
+        didSet { UserDefaults.standard.set(autoExportFolderPath, forKey: Self.autoExportFolderKey) }
+    }
+
     private static let inputKey = "selectedInputUID"
     private static let localeKey = "transcriptionLocaleID"
     private static let autoRecordKey = "autoRecordFromCalendar"
+    private static let autoExportEnabledKey = "autoExportEnabled"
+    private static let autoExportFolderKey = "autoExportFolderPath"
 
     init() {
         selectedInputUID = UserDefaults.standard.string(forKey: Self.inputKey)
         // Default to Brazilian Portuguese; the system locale ("en-US" here) was transcribing English.
         transcriptionLocaleID = UserDefaults.standard.string(forKey: Self.localeKey) ?? "pt-BR"
         autoRecordFromCalendar = UserDefaults.standard.bool(forKey: Self.autoRecordKey)
+        autoExportEnabled = UserDefaults.standard.bool(forKey: Self.autoExportEnabledKey)
+        autoExportFolderPath = UserDefaults.standard.string(forKey: Self.autoExportFolderKey)
+    }
+
+    var autoExportFolderURL: URL? {
+        autoExportFolderPath.map { URL(fileURLWithPath: $0) }
     }
 
     /// Resolve the current setting to a device ID for the recording engine.

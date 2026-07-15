@@ -1,3 +1,4 @@
+import AppKit
 import Speech
 import SwiftUI
 
@@ -47,6 +48,29 @@ struct SettingsView: View {
                 Text("Grava sozinho quando uma reunião do calendário com link de chamada começa e para no fim do evento — sem precisar clicar.")
             }
 
+            Section {
+                Toggle("Salvar transcrições automaticamente em Markdown", isOn: $settings.autoExportEnabled)
+                    .onChange(of: settings.autoExportEnabled) { _, enabled in
+                        if enabled, settings.autoExportFolderPath == nil { chooseFolder() }
+                    }
+                if settings.autoExportEnabled {
+                    HStack {
+                        Text(settings.autoExportFolderPath ?? "Nenhuma pasta escolhida")
+                            .foregroundStyle(settings.autoExportFolderPath == nil ? .secondary : .primary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer()
+                        Button(settings.autoExportFolderPath == nil ? "Escolher pasta…" : "Trocar…") {
+                            chooseFolder()
+                        }
+                    }
+                }
+            } header: {
+                Text("Salvamento automático")
+            } footer: {
+                Text("Ao encerrar cada transcrição, salva uma cópia em Markdown (.md) na pasta escolhida — além do que o app já guarda por conta própria.")
+            }
+
             Section("Presets de resumo") {
                 if appState.summaryPresets.presets.isEmpty {
                     Text("Nenhum preset. Salve um a partir da tela de uma reunião.")
@@ -91,6 +115,21 @@ struct SettingsView: View {
         } message: { preset in
             Text("“\(preset.name)” será apagado permanentemente.")
         }
+    }
+
+    /// Prompts for a folder via NSOpenPanel; cancelling while enabling the toggle turns it back off
+    /// so the setting never claims to be active without a destination.
+    private func chooseFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Escolher"
+        guard panel.runModal() == .OK, let url = panel.url else {
+            if appState.settings.autoExportFolderPath == nil { appState.settings.autoExportEnabled = false }
+            return
+        }
+        appState.settings.autoExportFolderPath = url.path
     }
 
     /// Two-way binding that renames a preset in place (persists via the store's didSet).
