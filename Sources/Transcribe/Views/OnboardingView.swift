@@ -39,12 +39,6 @@ struct OnboardingView: View {
                 .padding(.horizontal, 42)
                 .padding(.vertical, 38)
             }
-
-            ChromeBorderView(
-                progress: Double(grantedRequiredCount) / Double(PermissionSnapshot.requiredCount)
-            )
-            .padding(12)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.45), value: grantedRequiredCount)
         }
         .frame(minWidth: 820, idealWidth: 820, minHeight: 560, idealHeight: 560)
         .preferredColorScheme(.dark)

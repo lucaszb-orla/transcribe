@@ -69,13 +69,10 @@ Sources/Transcribe/
     MeetingExporter.swift   # Markdown/texto, copiar, exportar arquivo, salvamento automático em pasta
   Storage/
     MeetingStore.swift      # persistência local: 1 JSON por reunião em Application Support
-  Shaders/
-    ChromeBorder.metal      # brilho cromado da orla do onboarding
   Views/
     RootView.swift          # gate de onboarding → RecordingView (gravando) ou MeetingListView
     OnboardingView.swift    # fluxo editorial: 3 acessos essenciais + Calendário opcional
     OnboardingPermissionPanel.swift # etapa ativa, progresso 0/3...3/3 e ações de permissão
-    ChromeBorderView.swift  # orla cromada animada em Metal, com fallback estático acessível
     RecordingView.swift     # tela "Gravando": status, cronômetro, transcrição ao vivo, medidor de nível, pause/stop
     MeetingListView.swift   # lista + busca + excluir; abre a reunião recém-gravada
     MeetingDetailView.swift # título/participantes; gerar resumo (opções+presets); follow-up; transcrição editável; exportar
@@ -112,9 +109,8 @@ disco** (por design). Nada de nuvem/sync.
 
 ## Feito até agora
 
-- Onboarding editorial com arte cromada, progresso 0/3...3/3 e orla Metal animada; pede os três
-  acessos essenciais em sequência, oferece Calendário como extra pulável e inclui fallback estático
-  para Reduzir Movimento e uma orla reforçada para Aumentar Contraste.
+- Onboarding editorial com arte cromada e progresso 0/3...3/3; pede os três acessos essenciais em
+  sequência e oferece Calendário como extra pulável.
 - Gravação: mic + áudio do sistema mixados no transcritor, **transcrição ao vivo**, **pause/retomar**,
   **medidor de nível** do microfone.
 - Ajustes: seleção de **microfone** e **idioma** (padrão pt-BR).
