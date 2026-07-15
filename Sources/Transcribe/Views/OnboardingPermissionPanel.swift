@@ -29,7 +29,7 @@ enum OnboardingStage: Int, Hashable {
         switch self {
         case .microphone: "Captura o que você diz durante a reunião. O áudio é processado no próprio Mac."
         case .speechRecognition: "Transforma as falas em texto ao vivo usando o reconhecimento on-device da Apple."
-        case .screenRecording: "O macOS exige Gravação de Tela para capturar somente o áudio do sistema — nenhum vídeo é salvo."
+        case .screenRecording: "O macOS exige Gravação de Tela para capturar somente o áudio do sistema. Nenhum vídeo é salvo."
         case .calendar: "O Transcribe pode avisar quando uma reunião com link estiver começando. Você também pode ativar isso depois."
         case .complete: "As permissões essenciais estão ativas. Você já pode começar sua primeira transcrição."
         }

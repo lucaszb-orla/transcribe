@@ -44,6 +44,12 @@ open ~/Library/Developer/Xcode/DerivedData/Transcribe-*/Build/Products/Debug/Tra
   mexendo no repo ao mesmo tempo, cada tarefa nova roda em uma `git worktree` própria em vez de tudo
   direto na working copy principal.
 
+## Direção de UI e texto
+
+- Não adicionar borda decorativa ao onboarding. A arte cromada é o único destaque material.
+- Não usar travessão longo em textos da interface, documentação, comentários ou conteúdo exportado.
+  Preferir ponto, vírgula, dois-pontos ou parênteses conforme o contexto.
+
 ## Arquitetura
 
 ```

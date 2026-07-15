@@ -1,25 +1,25 @@
 # Transcribe
 
-> Transcrição de reuniões **100% on-device** para macOS — sem nuvem, sem contas, sem enviar seu áudio pra lugar nenhum.
+> Transcrição de reuniões **100% on-device** para macOS. Sem nuvem, sem contas e sem enviar seu áudio pra lugar nenhum.
 
 App nativo de macOS (barra de menu + janela) que grava, transcreve e resume suas reuniões usando
-os modelos locais da Apple. O áudio nunca sai do seu Mac e **nada é gravado em disco** — só o texto.
+os modelos locais da Apple. O áudio nunca sai do seu Mac e **nada é gravado em disco**. Só o texto.
 
 ![Lista de reuniões do Transcribe](docs/screenshot-list.png)
 
 ## ✨ Recursos
 
-- 🎙️ **Transcrição ao vivo** — mistura seu microfone com o áudio do sistema (os outros participantes) e
+- 🎙️ **Transcrição ao vivo:** mistura seu microfone com o áudio do sistema (os outros participantes) e
   transcreve em tempo real, com medidor de nível e **pausar/retomar**.
-- 🧠 **Resumo sob demanda** — gera um resumo em **tópicos ou prosa**, com itens de ação opcionais e um
+- 🧠 **Resumo sob demanda:** gera um resumo em **tópicos ou prosa**, com itens de ação opcionais e um
   campo de **instruções em linguagem natural** pra direcionar o modelo. Salve suas configurações como
   **presets** (Daily, Call de vendas, 1:1…).
-- ✅ **Itens de ação marcáveis** — vire as tarefas combinadas em checkboxes.
-- 📅 **Integração com o Calendário** — sugere a gravação quando uma reunião com link de chamada está
+- ✅ **Itens de ação marcáveis:** vire as tarefas combinadas em checkboxes.
+- 📅 **Integração com o Calendário:** sugere a gravação quando uma reunião com link de chamada está
   prestes a começar; opcionalmente **inicia e encerra sozinho** com base no evento.
-- 📤 **Exportar/compartilhar** — copie como Markdown/texto ou exporte um `.md`.
-- 🌐 **Idioma configurável** — padrão pt-BR, com os idiomas suportados pelo reconhecedor.
-- 🔒 **Privado por construção** — transcrição via `SpeechAnalyzer`, resumo via `FoundationModels`
+- 📤 **Exportar/compartilhar:** copie como Markdown/texto ou exporte um `.md`.
+- 🌐 **Idioma configurável:** padrão pt-BR, com os idiomas suportados pelo reconhecedor.
+- 🔒 **Privado por construção:** transcrição via `SpeechAnalyzer`, resumo via `FoundationModels`
   (Apple Intelligence), captura de áudio do sistema via `ScreenCaptureKit`. Tudo local.
 
 ## 🖥️ Requisitos
@@ -45,7 +45,7 @@ xcodebuild -project Transcribe.xcodeproj -scheme Transcribe -configuration Debug
 ```
 
 > O projeto é gerado a partir de `project.yml` (fonte da verdade). Defina seu `DEVELOPMENT_TEAM`
-> lá — uma identidade de assinatura estável é necessária para que o macOS **não zere as permissões**
+> lá. Uma identidade de assinatura estável é necessária para que o macOS **não zere as permissões**
 > a cada rebuild.
 
 ## 🔑 Permissões

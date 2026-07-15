@@ -2,7 +2,7 @@ import AVFoundation
 import ScreenCaptureKit
 
 /// Captures the audio coming out of the speakers (the other participants), via ScreenCaptureKit.
-/// This is the officially sanctioned way to grab system audio without a virtual driver — it just
+/// This is the officially sanctioned way to grab system audio without a virtual driver. It just
 /// happens to require the "Screen Recording" permission even though we never touch video (PRD risk).
 final class SystemAudioCapture: NSObject, SCStreamOutput, SCStreamDelegate {
     enum CaptureError: Error {
@@ -51,7 +51,7 @@ final class SystemAudioCapture: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     /// ScreenCaptureKit stopping the stream on its own (Screen Recording permission revoked mid-meeting,
-    /// display disconnected) — surface it instead of silently dropping system audio for the rest of the meeting.
+    /// display disconnected). Surface it instead of silently dropping system audio for the rest of the meeting.
     func stream(_ stream: SCStream, didStopWithError error: Error) {
         onError?(error)
     }

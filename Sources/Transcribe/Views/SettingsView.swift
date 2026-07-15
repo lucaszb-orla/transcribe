@@ -49,7 +49,7 @@ struct SettingsView: View {
                 Text("Calendário")
             } footer: {
                 if appState.permissions.snapshot.calendarAutomationAvailable {
-                    Text("Grava sozinho quando uma reunião do calendário com link de chamada começa e para no fim do evento — sem precisar clicar.")
+                    Text("Grava sozinho quando uma reunião do calendário com link de chamada começa e para no fim do evento, sem precisar clicar.")
                 } else {
                     Text("Conecte o Calendário na tela de Reuniões para ativar esta automação.")
                 }
@@ -85,7 +85,7 @@ struct SettingsView: View {
             } header: {
                 Text("Salvamento automático")
             } footer: {
-                Text("Ao encerrar cada transcrição, salva uma cópia em Markdown (.md) na pasta escolhida — além do que o app já guarda por conta própria.")
+                Text("Ao encerrar cada transcrição, salva uma cópia em Markdown (.md) na pasta escolhida, além do que o app já guarda por conta própria.")
             }
 
             Section("Presets de resumo") {
@@ -135,7 +135,7 @@ struct SettingsView: View {
             #endif
         }
         .formStyle(.grouped)
-        // Resizable within sensible bounds — a fixed frame made the Settings window non-resizable.
+        // Resizable within sensible bounds. A fixed frame made the Settings window non-resizable.
         .frame(
             minWidth: 460, idealWidth: 520, maxWidth: 720,
             minHeight: 420, idealHeight: 520, maxHeight: 820

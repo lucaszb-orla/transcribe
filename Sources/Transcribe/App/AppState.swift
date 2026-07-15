@@ -88,7 +88,7 @@ final class AppState {
         }
     }
 
-    /// Resume transcribing into an existing meeting — new speech appends to its transcript.
+    /// Resume transcribing into an existing meeting. New speech appends to its transcript.
     func continueMeeting(_ base: Meeting) async {
         guard mode == .standby, ensurePermissions() else { return }
         pendingSuggestion = nil
@@ -113,7 +113,7 @@ final class AppState {
         // the first RecordingSession (mic/screen capture left running with nothing referencing it).
         mode = .meeting
         let session = RecordingSession()
-        // SCStream's delegate callback can land on an arbitrary queue — hop to the MainActor before
+        // SCStream's delegate callback can land on an arbitrary queue. Hop to the MainActor before
         // touching AppState.
         session.onSystemAudioError = { [weak self] error in
             Task { @MainActor in
@@ -172,7 +172,7 @@ final class AppState {
                 TranscriptSegment(start: $0.start + offset, text: $0.text, speaker: $0.speaker)
             })
             updated.endedAt = endedAt
-            // The old summary/action items only cover the meeting up to the previous stop point —
+            // The old summary/action items only cover the meeting up to the previous stop point.
             // clear them so the detail view doesn't show a stale summary as if it were current.
             updated.summaryBullets = []
             updated.summaryProse = nil
@@ -215,7 +215,7 @@ final class AppState {
     }
 
     /// Opt-in (Ajustes > Salvamento automático): mirrors the just-saved transcript as a Markdown
-    /// file in the user's chosen folder. Best-effort — a failure here doesn't affect the meeting,
+    /// file in the user's chosen folder. Best-effort: a failure here doesn't affect the meeting,
     /// which is already safely stored in the app's own JSON store.
     private func maybeAutoExport(_ meeting: Meeting) {
         guard settings.autoExportEnabled, let folder = settings.autoExportFolderURL else { return }
