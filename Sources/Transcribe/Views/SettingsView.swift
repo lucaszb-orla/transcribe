@@ -5,6 +5,8 @@ import SwiftUI
 /// Preferences window (⌘,): which microphone to record and which language to transcribe.
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openWindow) private var openWindow
     @State private var devices: [AudioInputDevice] = []
     @State private var locales: [Locale] = []
     @State private var pendingPresetDelete: SummaryPreset?
@@ -110,6 +112,22 @@ struct SettingsView: View {
                     }
                 }
             }
+
+            #if DEBUG
+            Section {
+                Button("Rever onboarding", systemImage: "arrow.counterclockwise") {
+                    appState.permissions.beginOnboardingReplay()
+                    openWindow(id: "meetings")
+                    dismiss()
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                .accessibilityHint("Mostra todas as etapas sem solicitar novamente as permissões do macOS")
+            } header: {
+                Text("Desenvolvimento")
+            } footer: {
+                Text("Reproduz o onboarding completo sem alterar as permissões ou a conclusão já salva.")
+            }
+            #endif
         }
         .formStyle(.grouped)
         // Resizable within sensible bounds — a fixed frame made the Settings window non-resizable.

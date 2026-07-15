@@ -7,6 +7,7 @@ struct OnboardingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var privacyPercentage = 0
     @State private var showCompletion = false
+    @State private var replay = OnboardingReplay()
 
     var onFinished: () -> Void
 
@@ -27,7 +28,7 @@ struct OnboardingView: View {
                 OnboardingPermissionPanel(
                     stage: stage,
                     status: activeStatus,
-                    grantedRequiredCount: permissions.grantedRequiredCount,
+                    grantedRequiredCount: grantedRequiredCount,
                     reduceMotion: reduceMotion,
                     primaryTitle: primaryTitle,
                     secondaryTitle: secondaryTitle,
@@ -40,10 +41,10 @@ struct OnboardingView: View {
             }
 
             ChromeBorderView(
-                progress: Double(permissions.grantedRequiredCount) / Double(PermissionSnapshot.requiredCount)
+                progress: Double(grantedRequiredCount) / Double(PermissionSnapshot.requiredCount)
             )
             .padding(12)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.45), value: permissions.grantedRequiredCount)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.45), value: grantedRequiredCount)
         }
         .frame(minWidth: 820, idealWidth: 820, minHeight: 560, idealHeight: 560)
         .preferredColorScheme(.dark)
@@ -57,6 +58,9 @@ struct OnboardingView: View {
         }
         .onChange(of: reduceMotion) {
             if reduceMotion { privacyPercentage = 100 }
+        }
+        .onChange(of: permissions.isOnboardingReplayActive) {
+            if permissions.isOnboardingReplayActive { replay = OnboardingReplay() }
         }
     }
 
@@ -104,19 +108,27 @@ struct OnboardingView: View {
     }
 
     private var stage: OnboardingStage {
-        OnboardingFlow.stage(
+        if permissions.isOnboardingReplayActive { return replay.stage }
+        return OnboardingFlow.stage(
             for: permissions.snapshot,
             showCompletion: showCompletion
         )
     }
 
+    private var grantedRequiredCount: Int {
+        permissions.isOnboardingReplayActive
+            ? replay.grantedRequiredCount
+            : permissions.grantedRequiredCount
+    }
+
     private var activeStatus: PermissionStatus {
+        if permissions.isOnboardingReplayActive { return .notDetermined }
         switch stage {
-        case .microphone: permissions.microphone
-        case .speechRecognition: permissions.speechRecognition
-        case .screenRecording: permissions.screenRecording
-        case .calendar: permissions.calendar
-        case .complete: .granted
+        case .microphone: return permissions.microphone
+        case .speechRecognition: return permissions.speechRecognition
+        case .screenRecording: return permissions.screenRecording
+        case .calendar: return permissions.calendar
+        case .complete: return .granted
         }
     }
 
@@ -143,6 +155,11 @@ struct OnboardingView: View {
     }
 
     private func performPrimaryAction() {
+        if permissions.isOnboardingReplayActive, stage != .complete {
+            advanceReplay()
+            return
+        }
+
         switch stage {
         case .microphone:
             if activeStatus == .denied { openPrivacySettings(for: stage) }
@@ -179,8 +196,17 @@ struct OnboardingView: View {
     }
 
     private func showReady() {
+        if permissions.isOnboardingReplayActive {
+            advanceReplay()
+            return
+        }
         if reduceMotion { showCompletion = true }
         else { withAnimation(.easeOut(duration: 0.45)) { showCompletion = true } }
+    }
+
+    private func advanceReplay() {
+        if reduceMotion { replay.advance() }
+        else { withAnimation(.easeOut(duration: 0.45)) { replay.advance() } }
     }
 
     private func openPrivacySettings(for stage: OnboardingStage) {
