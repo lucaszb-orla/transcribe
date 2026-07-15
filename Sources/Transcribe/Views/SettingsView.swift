@@ -49,10 +49,20 @@ struct SettingsView: View {
             }
 
             Section {
-                Toggle("Salvar transcrições automaticamente em Markdown", isOn: $settings.autoExportEnabled)
-                    .onChange(of: settings.autoExportEnabled) { _, enabled in
-                        if enabled, settings.autoExportFolderPath == nil { chooseFolder() }
+                Toggle("Salvar transcrições automaticamente em Markdown", isOn: Binding(
+                    get: { settings.autoExportEnabled },
+                    set: { turnOn in
+                        if turnOn {
+                            if settings.autoExportFolderPath != nil {
+                                settings.autoExportEnabled = true
+                            } else {
+                                chooseFolder()
+                            }
+                        } else {
+                            settings.autoExportEnabled = false
+                        }
                     }
+                ))
                 if settings.autoExportEnabled {
                     HStack {
                         Text(settings.autoExportFolderPath ?? "Nenhuma pasta escolhida")
@@ -117,19 +127,18 @@ struct SettingsView: View {
         }
     }
 
-    /// Prompts for a folder via NSOpenPanel; cancelling while enabling the toggle turns it back off
-    /// so the setting never claims to be active without a destination.
+    /// Prompts for a folder via NSOpenPanel; only flips the toggle on once a folder is actually
+    /// picked, so cancelling leaves the setting untouched instead of claiming to be active.
     private func chooseFolder() {
+        NSApp.activate(ignoringOtherApps: true)
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.prompt = "Escolher"
-        guard panel.runModal() == .OK, let url = panel.url else {
-            if appState.settings.autoExportFolderPath == nil { appState.settings.autoExportEnabled = false }
-            return
-        }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
         appState.settings.autoExportFolderPath = url.path
+        appState.settings.autoExportEnabled = true
     }
 
     /// Two-way binding that renames a preset in place (persists via the store's didSet).

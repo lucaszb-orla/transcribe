@@ -65,13 +65,15 @@ enum MeetingExporter {
     }
 
     /// Writes the Markdown transcript straight to `folder`, no dialog — used by the opt-in
-    /// auto-export setting right after a meeting is saved.
-    @MainActor static func autoSave(_ meeting: Meeting, to folder: URL) {
+    /// auto-export setting right after a meeting is saved. Throws instead of swallowing errors so
+    /// the caller can surface a permission/missing-folder problem to the user.
+    @MainActor static func autoSave(_ meeting: Meeting, to folder: URL) throws {
         let url = folder.appendingPathComponent(suggestedFilename(meeting))
         do {
             try markdown(meeting).write(to: url, atomically: true, encoding: .utf8)
         } catch {
             log.error("Falha ao salvar automaticamente: \(error.localizedDescription)")
+            throw error
         }
     }
 

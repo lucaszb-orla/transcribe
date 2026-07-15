@@ -197,7 +197,11 @@ final class AppState {
     /// which is already safely stored in the app's own JSON store.
     private func maybeAutoExport(_ meeting: Meeting) {
         guard settings.autoExportEnabled, let folder = settings.autoExportFolderURL else { return }
-        MeetingExporter.autoSave(meeting, to: folder)
+        do {
+            try MeetingExporter.autoSave(meeting, to: folder)
+        } catch {
+            errorMessage = "A reunião foi salva, mas não deu pra copiar em Markdown para a pasta escolhida: \(error.localizedDescription)"
+        }
     }
 
     /// Generate (or regenerate) a summary for a saved meeting with the user's chosen options.
