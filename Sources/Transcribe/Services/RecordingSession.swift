@@ -21,7 +21,10 @@ final class RecordingSession {
 
     private let mic = MicrophoneCapture()
     private let systemAudio = SystemAudioCapture()
-    private let transcriber = Transcriber()
+    /// Separate recognizer per source (instead of one mixed stream) so segments can be tagged
+    /// "Você" vs. "Participantes" — the app already captures these two streams independently.
+    private let micTranscriber = Transcriber(speaker: .me)
+    private let systemTranscriber = Transcriber(speaker: .others)
     private var startedAt: Date?
 
     /// Called if system-audio capture stops unexpectedly mid-meeting (e.g. Screen Recording
@@ -32,15 +35,28 @@ final class RecordingSession {
     /// Skips feeding audio to the recognizer while paused (both capturers keep running).
     private var paused = false
 
-    var liveText: String { transcriber.liveText }
-    var liveSegments: [TranscriptSegment] { transcriber.segments }
+    var liveText: String {
+        var lines = liveSegments.map { "\($0.speaker?.label ?? Speaker.others.label): \($0.text)" }
+        if !micTranscriber.volatileText.isEmpty {
+            lines.append("\(Speaker.me.label): \(micTranscriber.volatileText)")
+        }
+        if !systemTranscriber.volatileText.isEmpty {
+            lines.append("\(Speaker.others.label): \(systemTranscriber.volatileText)")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    var liveSegments: [TranscriptSegment] {
+        (micTranscriber.segments + systemTranscriber.segments).sorted { $0.start < $1.start }
+    }
 
     func start(inputDeviceID: AudioDeviceID?, locale: Locale) async throws {
         guard state == .idle else { return }
         startedAt = Date()
 
-        logger.debug("starting transcriber…")
-        try await transcriber.start(locale: locale)
+        logger.debug("starting transcribers…")
+        try await micTranscriber.start(locale: locale)
+        try await systemTranscriber.start(locale: locale)
 
         logger.debug("starting mic capture…")
         do {
@@ -48,10 +64,11 @@ final class RecordingSession {
                 guard let self, !self.paused else { return }
                 let level = buffer.meterLevel
                 DispatchQueue.main.async { self.micLevel = level }
-                self.transcriber.ingest(buffer)
+                self.micTranscriber.ingest(buffer)
             }
         } catch {
-            _ = await transcriber.finish()
+            _ = await micTranscriber.finish()
+            _ = await systemTranscriber.finish()
             throw error
         }
 
@@ -59,13 +76,14 @@ final class RecordingSession {
         do {
             try await systemAudio.start(onBuffer: { [weak self] buffer in
                 guard let self, !self.paused else { return }
-                self.transcriber.ingest(buffer)
+                self.systemTranscriber.ingest(buffer)
             }, onError: { [weak self] error in
                 self?.onSystemAudioError?(error)
             })
         } catch {
             mic.stop()
-            _ = await transcriber.finish()
+            _ = await micTranscriber.finish()
+            _ = await systemTranscriber.finish()
             throw error
         }
         logger.debug("recording started")
@@ -90,7 +108,9 @@ final class RecordingSession {
         await systemAudio.stop()
         mic.stop()
         micLevel = 0
-        let segments = await transcriber.finish()
+        async let micSegments = micTranscriber.finish()
+        async let systemSegments = systemTranscriber.finish()
+        let segments = await (micSegments + systemSegments).sorted { $0.start < $1.start }
         state = .idle
         return (segments, startedAt ?? Date(), Date())
     }

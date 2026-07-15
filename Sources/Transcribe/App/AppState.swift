@@ -147,7 +147,7 @@ final class AppState {
             var updated = base
             let offset = max(0, (base.endedAt ?? base.startedAt).timeIntervalSince(base.startedAt))
             updated.transcript.append(contentsOf: segments.map {
-                TranscriptSegment(start: $0.start + offset, text: $0.text)
+                TranscriptSegment(start: $0.start + offset, text: $0.text, speaker: $0.speaker)
             })
             updated.endedAt = endedAt
             // The old summary/action items only cover the meeting up to the previous stop point —

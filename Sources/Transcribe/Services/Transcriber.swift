@@ -10,13 +10,20 @@ private let logger = Logger(subsystem: "com.lucasbaggiotto.Transcribe", category
 /// timestamped text, streaming partial ("volatile") results for live feedback. No custom vocabulary
 /// (see PRD risks on proper-noun/acronym accuracy, WhisperKit as fallback).
 ///
-/// Two independent sources (microphone + system audio) feed `ingest` concurrently, so conversion
-/// runs on a serial queue with one converter cached per input format.
+/// One instance handles a single audio source (mic or system audio) so its segments can be
+/// tagged with `speaker` — `RecordingSession` runs two of these to split "Você" vs.
+/// "Participantes" without needing real diarization.
 @Observable
 final class Transcriber {
     enum TranscriberError: Error {
         case localeNotSupported
         case noCompatibleAudioFormat
+    }
+
+    let speaker: Speaker
+
+    init(speaker: Speaker) {
+        self.speaker = speaker
     }
 
     /// Finalized segments (stable, used for the saved transcript).
@@ -119,7 +126,7 @@ final class Transcriber {
     private func appendFinal(start: TimeInterval, text: String) {
         volatileText = ""
         guard !text.isEmpty else { return }
-        segments.append(TranscriptSegment(start: start, text: text))
+        segments.append(TranscriptSegment(start: start, text: text, speaker: speaker))
     }
 
     @MainActor

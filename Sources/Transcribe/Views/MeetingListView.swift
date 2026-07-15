@@ -33,6 +33,7 @@ struct MeetingListView: View {
             }
             .searchable(text: $query, placement: .sidebar, prompt: "Buscar por título ou transcrição")
             .navigationTitle("Reuniões")
+            .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 360)
             .safeAreaInset(edge: .bottom) {
                 Button("Nova transcrição", systemImage: "record.circle") {
                     Task { await appState.startMeeting() }

@@ -1,9 +1,25 @@
 import Foundation
 
+/// Which capture source produced a segment. Not identity-based diarization — just the two
+/// streams the app already records separately (your mic vs. everyone else, mixed together
+/// via ScreenCaptureKit).
+enum Speaker: String, Codable {
+    case me, others
+
+    var label: String {
+        switch self {
+        case .me: "Você"
+        case .others: "Participantes"
+        }
+    }
+}
+
 struct TranscriptSegment: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var start: TimeInterval
     var text: String
+    /// Optional so older saved meetings (recorded before speaker splitting existed) still decode.
+    var speaker: Speaker? = nil
 }
 
 struct Meeting: Codable, Identifiable, Hashable {
@@ -37,12 +53,15 @@ struct Meeting: Codable, Identifiable, Hashable {
     }
 
     var fullTranscriptText: String {
-        transcript.map(\.text).joined(separator: " ")
+        transcript.map { segment in
+            guard let speaker = segment.speaker else { return segment.text }
+            return "\(speaker.label): \(segment.text)"
+        }.joined(separator: "\n")
     }
 
     /// v1 has no per-speaker/per-segment editing UI — editing rewrites the transcript as a
-    /// single blob and loses the original per-segment timestamps. Fine until phase 2 adds
-    /// diarization (see PRD "Próximos passos"), at which point this needs segment-aware editing.
+    /// single blob and loses the original per-segment timestamps/speaker tags. Fine until phase 2
+    /// adds real diarization, at which point this needs segment-aware editing.
     var editableTranscriptText: String {
         get { fullTranscriptText }
         set { transcript = [TranscriptSegment(start: 0, text: newValue)] }
