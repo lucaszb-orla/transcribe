@@ -7,13 +7,13 @@ Brasil (pt-BR)**.
 ## Stack
 
 - **Swift 5 / SwiftUI**, deployment target **macOS 26**, Apple Silicon.
-- Projeto gerado por **XcodeGen** — a fonte da verdade é `project.yml`, não o `.xcodeproj`.
+- Projeto gerado por **XcodeGen**: a fonte da verdade é `project.yml`, não o `.xcodeproj`.
 - APIs da Apple usadas (todas on-device):
-  - `Speech` (`SpeechAnalyzer` / `SpeechTranscriber`) — transcrição ao vivo.
-  - `FoundationModels` (Apple Intelligence) — resumo e rascunho de follow-up.
-  - `ScreenCaptureKit` — captura do áudio do sistema (outros participantes).
-  - `AVAudioEngine` — captura do microfone.
-  - `EventKit` — sugere gravação a partir de reuniões do calendário com link de chamada.
+  - `Speech` (`SpeechAnalyzer` / `SpeechTranscriber`): transcrição ao vivo.
+  - `FoundationModels` (Apple Intelligence): resumo e rascunho de follow-up.
+  - `ScreenCaptureKit`: captura do áudio do sistema (outros participantes).
+  - `AVAudioEngine`: captura do microfone.
+  - `EventKit`: sugere gravação a partir de reuniões do calendário com link de chamada.
 
 ## Build & Run
 
@@ -24,14 +24,14 @@ open ~/Library/Developer/Xcode/DerivedData/Transcribe-*/Build/Products/Debug/Tra
 ```
 
 - **Assinatura (crítico):** `DEVELOPMENT_TEAM` em `project.yml` = `7QTC8MU95P` (personal team). Sem uma
-  identidade estável, cada rebuild muda a assinatura ad-hoc e o macOS **zera as permissões (TCC)** —
-  era a causa do "toda vez pede permissão de novo". Sempre buildar com `-allowProvisioningUpdates`.
+  identidade estável, cada rebuild muda a assinatura ad-hoc e o macOS **zera as permissões (TCC)**,
+  que era a causa do "toda vez pede permissão de novo". Sempre buildar com `-allowProvisioningUpdates`.
 - Logs do app: `log show --predicate 'subsystem == "com.lucasbaggiotto.Transcribe"' --last 5m --info`
   (os `logger.debug` não persistem; use `.notice`/`.error` para depurar via `log show`).
 
 ## Workflow com Claude Code
 
-- **Commitar a cada fix ou feature.** Não acumular várias mudanças num commit só — assim que uma
+- **Commitar a cada fix ou feature.** Não acumular várias mudanças num commit só: assim que uma
   correção ou funcionalidade nova builda e roda, commita antes de seguir pra próxima coisa.
 - **Usar worktree separada por padrão.** Pra não dar conflito de arquivo quando há mais de uma tarefa
   mexendo no repo ao mesmo tempo, cada tarefa nova roda em uma `git worktree` própria em vez de tudo
@@ -43,7 +43,7 @@ open ~/Library/Developer/Xcode/DerivedData/Transcribe-*/Build/Products/Debug/Tra
 Sources/Transcribe/
   App/
     TranscribeApp.swift     # @main: MenuBarExtra + Window(RootView) + Settings(SettingsView)
-    AppState.swift          # @MainActor @Observable — estado central, orquestra tudo
+    AppState.swift          # @MainActor @Observable, estado central, orquestra tudo
   Models/
     Meeting.swift           # Meeting + TranscriptSegment (Codable, salvos em JSON)
     MeetingSummary.swift    # SummaryOptions, SummaryResult, @Generable dos resumos
@@ -68,7 +68,7 @@ Sources/Transcribe/
     RecordingView.swift     # tela "Gravando": status, cronômetro, transcrição ao vivo, medidor de nível, pause/stop
     MeetingListView.swift   # lista + busca + excluir; abre a reunião recém-gravada
     MeetingDetailView.swift # título/participantes; gerar resumo (opções+presets); follow-up; transcrição editável; exportar
-    SettingsView.swift      # ⌘, — microfone + idioma da transcrição
+    SettingsView.swift      # ⌘,: microfone + idioma da transcrição
     MenuBarView.swift       # controles rápidos na barra de menu
 Tests/TranscribeTests/      # CallLinkDetectorTests
 ```
@@ -80,7 +80,7 @@ na hora; **o resumo é sob demanda** (o usuário escolhe formato/opções na tel
 
 Quatro, pedidas explicitamente no onboarding: **Microfone**, **Reconhecimento de fala**, **Calendário**,
 **Gravação de tela** (esta última necessária pro ScreenCaptureKit capturar o áudio do sistema, mesmo sem
-vídeo). A de gravação de tela só é reavaliada no launch — mudou nos Ajustes, precisa reiniciar o app.
+vídeo). A de gravação de tela só é reavaliada no launch: mudou nos Ajustes, precisa reiniciar o app.
 
 ## Armazenamento
 
@@ -102,9 +102,9 @@ disco** (por design). Nada de nuvem/sync.
   para no fim do evento. `MeetingSuggestion.end` + `CalendarMonitor.onNewCandidate` + auto-stop task no `AppState`.
 - **Exportar/compartilhar** (Markdown / texto / arquivo `.md`).
 - **Salvamento automático opcional** em Markdown numa pasta escolhida pelo usuário (Ajustes,
-  desativado por padrão) — a cada reunião encerrada, espelha o `.md` lá além do armazenamento próprio.
+  desativado por padrão): a cada reunião encerrada, espelha o `.md` lá além do armazenamento próprio.
 - **Transcrição dividida por falante** ("Você" vs. "Participantes"): mic e áudio do sistema passam por
-  dois `Transcriber` separados, cada um tagueando seus segmentos — não é diarização de verdade (não
+  dois `Transcriber` separados, cada um tagueando seus segmentos, não é diarização de verdade (não
   separa os participantes remotos entre si, que chegam misturados no áudio do sistema).
 - **Continuar transcrição** depois de encerrada, sem precisar criar uma reunião nova.
 - Confirmação antes de encerrar gravação ou apagar qualquer coisa (reunião, preset).
@@ -113,23 +113,23 @@ disco** (por design). Nada de nuvem/sync.
 - Ícone do app e ícone da menu bar (`quote.bubble` / `quote.bubble.fill` gravando).
 
 Nota: o "rascunho de follow-up" foi removido (não ficou bom). A ideia de direcionar a IA por
-linguagem natural continua no campo **Instruções adicionais** do resumo — sem toggles de tom.
+linguagem natural continua no campo **Instruções adicionais** do resumo, sem toggles de tom.
 
 ## Gotchas conhecidos
 
 - **`AVAudioEngine` mixer + `outputVolume = 0`:** se você fizer tap no `mainMixerNode` e zerar o volume,
   o tap recebe **silêncio** (era o bug "transcrição não pega"). Por isso o mic é capturado com tap direto
-  no `inputNode`, sem rota de saída — sem playback, sem eco, sem gravar em disco.
+  no `inputNode`, sem rota de saída: sem playback, sem eco, sem gravar em disco.
 - **Idioma:** `Locale.current` transcrevia em inglês. Agora o idioma vem de `AppSettings` (padrão `pt-BR`,
   que é suportado e já vem instalado neste Mac).
-- **FoundationModels exige Apple Intelligence ativado** — se não estiver, resumo/follow-up lançam erro
+- **FoundationModels exige Apple Intelligence ativado**: se não estiver, resumo/follow-up lançam erro
   legível (`appleIntelligenceNotEnabled`) sem quebrar a transcrição.
 
 ## Próximos passos possíveis
 
 - Diarização de verdade entre os participantes remotos (hoje só separa "Você" de "Participantes";
-  dentro de "Participantes" ainda é todo mundo misturado — exigiria modelo de embeddings/clustering,
+  dentro de "Participantes" ainda é todo mundo misturado, exigiria modelo de embeddings/clustering,
   dependência externa real, avaliado e descartado por ora).
 - Exportar PDF; enviar direto pra e-mail/Slack.
-- Melhorar vocabulário (nomes próprios/siglas) — WhisperKit avaliado como fallback e descartado por
+- Melhorar vocabulário (nomes próprios/siglas): WhisperKit avaliado como fallback e descartado por
   ora (sem streaming nativo e exigiria manter áudio em memória, já que o app não grava em disco).
