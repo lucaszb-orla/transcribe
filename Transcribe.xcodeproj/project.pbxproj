@@ -8,7 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		0601E56FB1A70616612E1A98 /* MeetingListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A685F7F5BA510E51768863C4 /* MeetingListView.swift */; };
+		086935DB4827C077128FC0A2 /* ChromeBorder.metal in Sources */ = {isa = PBXBuildFile; fileRef = 56D4ACAE1296B03930468368 /* ChromeBorder.metal */; };
 		18969BE10AB3A8FD314F7E9E /* Transcriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EB094440EC56682557B5D9 /* Transcriber.swift */; };
+		20999A7027A729A53A8DBCEC /* ChromeBorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 850FA240FA13C47BA2E04328 /* ChromeBorderView.swift */; };
 		2421E83DB73237C9D0AD86E6 /* MeetingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2110331B49B783A39E9A3CB8 /* MeetingStore.swift */; };
 		2E5C0030FE75F6392E2C7D56 /* CallLinkDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8646A7D11647B6100B6EE01 /* CallLinkDetector.swift */; };
 		3900E8D7EEEC8912B14F4836 /* SummaryPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D69A1935811A656C177589 /* SummaryPresets.swift */; };
@@ -62,10 +64,12 @@
 		4134A08311B55D705F0939A7 /* SystemAudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAudioCapture.swift; sourceTree = "<group>"; };
 		432B4400C5021E5C869167F6 /* Meeting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Meeting.swift; sourceTree = "<group>"; };
 		547BE9AED3DB2683E7130780 /* TranscribeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscribeApp.swift; sourceTree = "<group>"; };
+		56D4ACAE1296B03930468368 /* ChromeBorder.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ChromeBorder.metal; sourceTree = "<group>"; };
 		572FEF7D43BC0B9826A6BA43 /* RecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingView.swift; sourceTree = "<group>"; };
 		5812FF85E2A118A4CD275DA2 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		64DCF3BF5A013561B1842837 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		7B091EBDD6399870B8B4DD6C /* CMSampleBuffer+PCM.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CMSampleBuffer+PCM.swift"; sourceTree = "<group>"; };
+		850FA240FA13C47BA2E04328 /* ChromeBorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChromeBorderView.swift; sourceTree = "<group>"; };
 		93F55AFDD7822EBF1457958A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9D48DBB76E0BF35A27FF2B72 /* Summarizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Summarizer.swift; sourceTree = "<group>"; };
 		A0D69A1935811A656C177589 /* SummaryPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryPresets.swift; sourceTree = "<group>"; };
@@ -139,6 +143,14 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
+		9224EFBF89A6F1C4E74D4B5B /* Shaders */ = {
+			isa = PBXGroup;
+			children = (
+				56D4ACAE1296B03930468368 /* ChromeBorder.metal */,
+			);
+			path = Shaders;
+			sourceTree = "<group>";
+		};
 		A83E6C35A0815260DFE8B414 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
@@ -175,6 +187,7 @@
 		DF4A2198F11CFD39AB4D1D21 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				850FA240FA13C47BA2E04328 /* ChromeBorderView.swift */,
 				C2CBCFF03C743AD3FEAF7CEC /* ConfirmationDialogs.swift */,
 				AB2A51506BBE8BC72261072A /* MeetingDetailView.swift */,
 				A685F7F5BA510E51768863C4 /* MeetingListView.swift */,
@@ -196,6 +209,7 @@
 				35D300C57CF5CD93A50DFD21 /* App */,
 				41B3AD1DCEB3B5F21B47839E /* Models */,
 				870ED3BB74D80AACBCACA1E7 /* Services */,
+				9224EFBF89A6F1C4E74D4B5B /* Shaders */,
 				AE24239CCEC7D4833E8675E4 /* Storage */,
 				DF4A2198F11CFD39AB4D1D21 /* Views */,
 			);
@@ -301,6 +315,8 @@
 				5EC9968DF751E8EA58652ECF /* CMSampleBuffer+PCM.swift in Sources */,
 				DCA4464EF68A847A6F2815F7 /* CalendarMonitor.swift in Sources */,
 				2E5C0030FE75F6392E2C7D56 /* CallLinkDetector.swift in Sources */,
+				086935DB4827C077128FC0A2 /* ChromeBorder.metal in Sources */,
+				20999A7027A729A53A8DBCEC /* ChromeBorderView.swift in Sources */,
 				7D03266FBC98528DD8178676 /* ConfirmationDialogs.swift in Sources */,
 				78F01AE488073D43E90A6D9A /* Meeting.swift in Sources */,
 				CBD78366B7F3A34C72C5E38A /* MeetingDetailView.swift in Sources */,
