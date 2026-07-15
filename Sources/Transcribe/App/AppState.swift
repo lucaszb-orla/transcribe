@@ -25,6 +25,10 @@ final class AppState {
     private var recordingSession: RecordingSession?
     private var pendingSuggestion: MeetingSuggestion?
     private var autoStopTask: Task<Void, Never>?
+    /// When set, the current recording is a continuation and its segments append to this meeting.
+    private var continuationBase: Meeting?
+
+    var isContinuing: Bool { continuationBase != nil }
 
     var suggestion: MeetingSuggestion? { calendarMonitor.suggestion }
     var liveTranscript: [TranscriptSegment] { recordingSession?.liveSegments ?? [] }
@@ -50,29 +54,48 @@ final class AppState {
     }
 
     func startMeeting(from suggestion: MeetingSuggestion? = nil) async {
-        guard mode == .standby else { return }
-        permissions.refresh()
-        guard permissions.allGranted else {
-            errorMessage = "Conceda acesso ao microfone, reconhecimento de fala, calendário e gravação de tela antes de gravar."
-            return
-        }
+        guard mode == .standby, ensurePermissions() else { return }
+        continuationBase = nil
         pendingSuggestion = suggestion
         calendarMonitor.dismissCurrentSuggestion()
 
+        guard await beginSession() else { return }
+        // Auto-stop at the event's end when auto-recording is on and this came from the calendar.
+        if settings.autoRecordFromCalendar, let end = suggestion?.end {
+            scheduleAutoStop(at: end)
+        }
+    }
+
+    /// Resume transcribing into an existing meeting — new speech appends to its transcript.
+    func continueMeeting(_ base: Meeting) async {
+        guard mode == .standby, ensurePermissions() else { return }
+        pendingSuggestion = nil
+        continuationBase = base
+        if !(await beginSession()) { continuationBase = nil }
+    }
+
+    private func ensurePermissions() -> Bool {
+        permissions.refresh()
+        guard permissions.allGranted else {
+            errorMessage = "Conceda acesso ao microfone, reconhecimento de fala, calendário e gravação de tela antes de gravar."
+            return false
+        }
+        return true
+    }
+
+    private func beginSession() async -> Bool {
         let session = RecordingSession()
         recordingSession = session
         do {
             try await session.start(inputDeviceID: settings.resolvedInputDeviceID, locale: settings.transcriptionLocale)
             recordingStartedAt = Date()
             mode = .meeting
-            // Auto-stop at the event's end when auto-recording is on and this came from the calendar.
-            if settings.autoRecordFromCalendar, let end = suggestion?.end {
-                scheduleAutoStop(at: end)
-            }
+            return true
         } catch {
-            logger.error("startMeeting failed: \(String(describing: error), privacy: .public)")
+            logger.error("beginSession failed: \(String(describing: error), privacy: .public)")
             errorMessage = "Não foi possível iniciar a gravação: \(error.localizedDescription)"
             recordingSession = nil
+            return false
         }
     }
 
@@ -103,6 +126,21 @@ final class AppState {
         recordingStartedAt = nil
 
         let (segments, startedAt, endedAt) = await session.stop()
+
+        // Continuation: append the new segments (offset past the existing recording) to the base meeting.
+        if let base = continuationBase {
+            continuationBase = nil
+            pendingSuggestion = nil
+            var updated = base
+            let offset = max(0, (base.endedAt ?? base.startedAt).timeIntervalSince(base.startedAt))
+            updated.transcript.append(contentsOf: segments.map {
+                TranscriptSegment(start: $0.start + offset, text: $0.text)
+            })
+            updated.endedAt = endedAt
+            try? store.save(updated)
+            pendingReviewMeetingID = updated.id
+            return
+        }
 
         // Save the transcript immediately; summarization is now on-demand (the detail view asks the
         // user which format/options they want) so nothing is lost even if they never summarize.

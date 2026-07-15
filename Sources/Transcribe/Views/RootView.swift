@@ -7,13 +7,23 @@ struct RootView: View {
     @Environment(PermissionsManager.self) private var permissions
 
     var body: some View {
+        content
+            .animation(.smooth(duration: 0.35), value: appState.mode)
+            .animation(.smooth(duration: 0.35), value: permissions.allGranted)
+    }
+
+    @ViewBuilder
+    private var content: some View {
         if !permissions.allGranted {
             OnboardingView { permissions.refresh() }
+                .transition(.opacity)
         } else if appState.mode == .meeting {
             RecordingView()
                 .frame(minWidth: 480, minHeight: 420)
+                .transition(.opacity)
         } else {
             MeetingListView()
+                .transition(.opacity)
         }
     }
 }

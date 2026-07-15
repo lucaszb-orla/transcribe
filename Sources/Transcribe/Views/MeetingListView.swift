@@ -4,6 +4,7 @@ struct MeetingListView: View {
     @Environment(AppState.self) private var appState
     @State private var query = ""
     @State private var selection: Meeting?
+    @State private var pendingDelete: Meeting?
 
     var body: some View {
         NavigationSplitView {
@@ -23,12 +24,12 @@ struct MeetingListView: View {
                 .tag(meeting)
                 .contextMenu {
                     Button("Excluir", systemImage: "trash", role: .destructive) {
-                        delete(meeting)
+                        pendingDelete = meeting
                     }
                 }
             }
             .onDeleteCommand {
-                if let selection { delete(selection) }
+                if let selection { pendingDelete = selection }
             }
             .searchable(text: $query, prompt: "Buscar por título ou transcrição")
             .navigationTitle("Reuniões")
@@ -91,6 +92,15 @@ struct MeetingListView: View {
             Button("Fechar") {}
         } message: {
             Text(appState.errorMessage ?? "")
+        }
+        .alert("Excluir reunião?", isPresented: Binding(
+            get: { pendingDelete != nil },
+            set: { if !$0 { pendingDelete = nil } }
+        ), presenting: pendingDelete) { meeting in
+            Button("Excluir", role: .destructive) { delete(meeting) }
+            Button("Cancelar", role: .cancel) {}
+        } message: { meeting in
+            Text("“\(meeting.title)” será excluída permanentemente. Esta ação não pode ser desfeita.")
         }
         .onAppear { selectPendingReview() }
         .onChange(of: appState.pendingReviewMeetingID) { selectPendingReview() }

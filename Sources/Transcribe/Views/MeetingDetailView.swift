@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MeetingDetailView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State var meeting: Meeting
     var onDelete: () -> Void = {}
 
@@ -14,6 +15,12 @@ struct MeetingDetailView: View {
 
     @State private var showSavePreset = false
     @State private var newPresetName = ""
+    @State private var confirmDelete = false
+
+    @State private var optionsExpanded = true
+    @State private var summaryExpanded = true
+    @State private var actionsExpanded = true
+    @State private var transcriptExpanded = false
 
     var body: some View {
         ScrollView {
@@ -29,6 +36,12 @@ struct MeetingDetailView: View {
         }
         .background(.background)
         .toolbar {
+            ToolbarItem {
+                Button("Continuar transcrição", systemImage: "mic.badge.plus") {
+                    Task { await appState.continueMeeting(meeting) }
+                }
+                .disabled(appState.mode == .meeting)
+            }
             ToolbarItem {
                 Menu {
                     Button("Copiar como Markdown") { MeetingExporter.copyToPasteboard(MeetingExporter.markdown(meeting)) }
@@ -47,14 +60,22 @@ struct MeetingDetailView: View {
             }
             ToolbarItem {
                 Button("Excluir", systemImage: "trash", role: .destructive) {
-                    do {
-                        try appState.store.delete(meeting)
-                        onDelete()
-                    } catch {
-                        appState.errorMessage = "Não foi possível excluir a reunião: \(error.localizedDescription)"
-                    }
+                    confirmDelete = true
                 }
             }
+        }
+        .alert("Excluir reunião?", isPresented: $confirmDelete) {
+            Button("Excluir", role: .destructive) {
+                do {
+                    try appState.store.delete(meeting)
+                    onDelete()
+                } catch {
+                    appState.errorMessage = "Não foi possível excluir a reunião: \(error.localizedDescription)"
+                }
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("“\(meeting.title)” será excluída permanentemente. Esta ação não pode ser desfeita.")
         }
     }
 
@@ -100,10 +121,13 @@ struct MeetingDetailView: View {
     @ViewBuilder
     private var summarySection: some View {
         if meeting.hasSummary, !editingOptions {
-            section("Resumo", systemImage: "sparkles") {
-                Button("Refazer", systemImage: "arrow.clockwise") { editingOptions = true }
-                    .buttonStyle(.borderless)
-                    .controlSize(.small)
+            section("Resumo", systemImage: "sparkles", isExpanded: $summaryExpanded) {
+                Button("Refazer", systemImage: "arrow.clockwise") {
+                    withAnimation(.smooth) { editingOptions = true }
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .labelStyle(.iconOnly)
             } content: {
                 if let prose = meeting.summaryProse, !prose.isEmpty {
                     Text(prose)
@@ -123,17 +147,18 @@ struct MeetingDetailView: View {
                     }
                 }
             }
+            .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
         } else {
             summaryOptionsForm
+                .transition(.opacity)
         }
     }
 
     private var summaryOptionsForm: some View {
-        GroupBox {
+        section("Gerar resumo", systemImage: "sparkles", isExpanded: $optionsExpanded) {
+            EmptyView()
+        } content: {
             VStack(alignment: .leading, spacing: 14) {
-                Label("Gerar resumo", systemImage: "sparkles")
-                    .font(.headline)
-
                 Picker("Modelo", selection: $selectedPresetID) {
                     Text("Personalizado").tag(UUID?.none)
                     ForEach(appState.summaryPresets.presets) { preset in
@@ -172,7 +197,10 @@ struct MeetingDetailView: View {
 
                 HStack {
                     if editingOptions, meeting.hasSummary {
-                        Button("Cancelar") { editingOptions = false; summaryError = nil }
+                        Button("Cancelar") {
+                            summaryError = nil
+                            withAnimation(.smooth) { editingOptions = false }
+                        }
                     }
                     Button("Salvar como preset…", systemImage: "bookmark") {
                         newPresetName = ""
@@ -212,19 +240,20 @@ struct MeetingDetailView: View {
     // MARK: - Actions
 
     private var actionsSection: some View {
-        section("Ações", systemImage: "checklist") {
+        section("Ações", systemImage: "checklist", isExpanded: $actionsExpanded) {
             EmptyView()
         } content: {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(meeting.actionItems, id: \.self) { item in
                     let done = meeting.isActionDone(item)
                     Button {
-                        meeting.toggleActionDone(item)
+                        withAnimation(.snappy) { meeting.toggleActionDone(item) }
                         try? appState.store.save(meeting)
                     } label: {
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
                             Image(systemName: done ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(done ? Color.accentColor : .secondary)
+                                .contentTransition(.symbolEffect(.replace))
                             Text(item)
                                 .strikethrough(done)
                                 .foregroundStyle(done ? .secondary : .primary)
@@ -242,7 +271,7 @@ struct MeetingDetailView: View {
     // MARK: - Transcript
 
     private var transcriptSection: some View {
-        section("Transcrição", systemImage: "text.quote") {
+        section("Transcrição", systemImage: "text.quote", isExpanded: $transcriptExpanded) {
             EmptyView()
         } content: {
             TextEditor(text: $meeting.editableTranscriptText)
@@ -256,24 +285,31 @@ struct MeetingDetailView: View {
 
     // MARK: - Section helper
 
-    /// A titled section with an optional trailing control — a lighter, more native look than
-    /// stacked GroupBoxes (HIG: prefer content over chrome).
+    /// A collapsible titled section with an optional trailing control. Uses a native
+    /// `DisclosureGroup` so long content (resumo, transcrição) can be tucked away.
     private func section<Trailing: View, Content: View>(
         _ title: String,
         systemImage: String,
+        isExpanded: Binding<Bool>,
         @ViewBuilder trailing: () -> Trailing,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let body = content()
+        let control = trailing()
+        return DisclosureGroup(isExpanded: isExpanded.animation(.smooth)) {
+            body
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 8)
+        } label: {
             HStack {
                 Label(title, systemImage: systemImage)
                     .font(.headline)
                 Spacer()
-                trailing()
+                control
             }
-            content()
-                .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(.rect)
         }
+        .tint(.secondary)
     }
 
     private func generate() async {
@@ -281,8 +317,11 @@ struct MeetingDetailView: View {
         summaryError = nil
         defer { summarizing = false }
         do {
-            meeting = try await appState.generateSummary(for: meeting, options: options)
-            editingOptions = false
+            let updated = try await appState.generateSummary(for: meeting, options: options)
+            withAnimation(.smooth) {
+                meeting = updated
+                editingOptions = false
+            }
         } catch {
             summaryError = error.localizedDescription
         }

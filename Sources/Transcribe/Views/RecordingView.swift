@@ -4,6 +4,7 @@ import SwiftUI
 /// pause/resume + stop controls.
 struct RecordingView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var now = Date()
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -16,7 +17,11 @@ struct RecordingView: View {
             Divider()
             controls
         }
-        .onReceive(timer) { now = $0 }
+        .animation(.smooth, value: appState.isPaused)
+        .animation(.smooth, value: appState.liveText.isEmpty)
+        .onReceive(timer) { date in
+            withAnimation(.snappy(duration: 0.3)) { now = date }
+        }
     }
 
     private var header: some View {
@@ -25,28 +30,38 @@ struct RecordingView: View {
                 Circle()
                     .fill(appState.isPaused ? .orange : .red)
                     .frame(width: 10, height: 10)
-                    .opacity(appState.isPaused ? 1 : pulse)
-                    .animation(appState.isPaused ? nil : .easeInOut(duration: 0.8).repeatForever(), value: pulse)
+                    .opacity(appState.isPaused || reduceMotion ? 1 : pulse)
+                    .animation(appState.isPaused || reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(), value: pulse)
                 Text(appState.isPaused ? "Pausado" : "Gravando")
                     .font(.headline)
+                    .contentTransition(.numericText())
                 Spacer()
                 Text(elapsed)
                     .font(.system(.title3, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
+                    .contentTransition(.numericText())
             }
 
             HStack(spacing: 8) {
                 Image(systemName: appState.isPaused ? "mic.slash.fill" : "mic.fill")
                     .foregroundStyle(appState.isPaused ? .secondary : .primary)
                     .imageScale(.small)
+                    .contentTransition(.symbolEffect(.replace))
                 LevelMeter(level: appState.isPaused ? 0 : appState.micLevel)
                     .frame(height: 6)
+            }
+
+            if appState.isContinuing {
+                Label("Continuando uma transcrição existente", systemImage: "arrow.uturn.left")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding()
         .background(.bar)
-        .onAppear { pulse = 0.3 }
+        .onAppear { if !reduceMotion { pulse = 0.3 } }
     }
 
     @State private var pulse = 1.0
@@ -56,10 +71,12 @@ struct RecordingView: View {
         if appState.liveText.isEmpty {
             ContentUnavailableView {
                 Label("Ouvindo…", systemImage: "waveform")
+                    .symbolEffect(.variableColor.iterative, isActive: !reduceMotion)
             } description: {
                 Text("Fale algo para ver a transcrição aparecer em tempo real.")
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .transition(.opacity)
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -75,25 +92,24 @@ struct RecordingView: View {
                     withAnimation { proxy.scrollTo("live", anchor: .bottom) }
                 }
             }
+            .transition(.opacity)
         }
     }
 
     private var controls: some View {
         HStack {
-            if appState.isPaused {
-                Button { appState.resumeMeeting() } label: {
-                    Label("Retomar", systemImage: "play.fill")
-                }
-            } else {
-                Button { appState.pauseMeeting() } label: {
-                    Label("Pausar", systemImage: "pause.fill")
-                }
+            Button {
+                if appState.isPaused { appState.resumeMeeting() } else { appState.pauseMeeting() }
+            } label: {
+                Label(appState.isPaused ? "Retomar" : "Pausar",
+                      systemImage: appState.isPaused ? "play.fill" : "pause.fill")
+                    .contentTransition(.symbolEffect(.replace))
             }
 
             Spacer()
 
             Button(role: .destructive) {
-                Task { await appState.endMeeting() }
+                confirmEnd = true
             } label: {
                 Label("Encerrar", systemImage: "stop.fill")
             }
@@ -104,7 +120,17 @@ struct RecordingView: View {
         .controlSize(.large)
         .padding()
         .background(.bar)
+        .confirmationDialog("Encerrar transcrição?", isPresented: $confirmEnd, titleVisibility: .visible) {
+            Button("Encerrar", role: .destructive) {
+                Task { await appState.endMeeting() }
+            }
+            Button("Continuar gravando", role: .cancel) {}
+        } message: {
+            Text("A transcrição será salva. Você pode retomá-la depois abrindo a reunião.")
+        }
     }
+
+    @State private var confirmEnd = false
 
     private var elapsed: String {
         guard let start = appState.recordingStartedAt else { return "00:00" }

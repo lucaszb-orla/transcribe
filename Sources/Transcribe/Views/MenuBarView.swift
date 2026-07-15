@@ -4,6 +4,8 @@ import SwiftUI
 struct MenuBarView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var confirmEnd = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -12,6 +14,7 @@ struct MenuBarView: View {
             if appState.mode == .standby, let suggestion = appState.suggestion {
                 Divider()
                 suggestionBanner(suggestion)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
             }
 
             Divider()
@@ -42,6 +45,17 @@ struct MenuBarView: View {
         }
         .padding(12)
         .frame(width: 280)
+        .animation(.smooth, value: appState.suggestion)
+        .animation(.smooth, value: appState.mode)
+        .animation(.smooth, value: appState.isPaused)
+        .confirmationDialog("Encerrar transcrição?", isPresented: $confirmEnd, titleVisibility: .visible) {
+            Button("Encerrar", role: .destructive) {
+                Task { await appState.endMeeting() }
+            }
+            Button("Continuar gravando", role: .cancel) {}
+        } message: {
+            Text("A transcrição será salva. Você pode retomá-la depois abrindo a reunião.")
+        }
     }
 
     private var statusHeader: some View {
@@ -101,12 +115,12 @@ struct MenuBarView: View {
                     appState.pauseMeeting()
                 }
             }
-            Button("Encerrar reunião", systemImage: "stop.circle") {
-                Task { await appState.endMeeting() }
+            Button("Encerrar transcrição", systemImage: "stop.circle") {
+                confirmEnd = true
             }
             .tint(.red)
         } else {
-            Button("Iniciar gravação manual", systemImage: "record.circle") {
+            Button("Nova transcrição", systemImage: "record.circle") {
                 Task { await appState.startMeeting() }
             }
         }
