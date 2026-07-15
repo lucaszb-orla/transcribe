@@ -161,7 +161,7 @@ struct OnboardingView: View {
             } else {
                 Task {
                     await appState.requestCalendarIntegration()
-                    if permissions.calendar == .granted { showReady() }
+                    showReady()
                 }
             }
         case .complete:

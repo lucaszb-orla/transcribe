@@ -114,7 +114,7 @@ disco** (por design). Nada de nuvem/sync.
 
 - Onboarding editorial com arte cromada, progresso 0/3...3/3 e orla Metal animada; pede os três
   acessos essenciais em sequência, oferece Calendário como extra pulável e inclui fallback estático
-  para Reduzir Movimento/Aumentar Contraste.
+  para Reduzir Movimento e uma orla reforçada para Aumentar Contraste.
 - Gravação: mic + áudio do sistema mixados no transcritor, **transcrição ao vivo**, **pause/retomar**,
   **medidor de nível** do microfone.
 - Ajustes: seleção de **microfone** e **idioma** (padrão pt-BR).

@@ -11,8 +11,8 @@ struct MeetingSuggestion: Identifiable, Equatable {
     let callURL: URL
 }
 
-/// Polls the Apple Calendar for events with a video-call link about to start.
-/// This only ever *suggests* a recording — starting it is always a user action (see PRD risks).
+/// Polls the Apple Calendar for events with a video-call link about to start. The monitor surfaces
+/// suggestions; AppState owns the separate, opt-in auto-recording policy.
 @Observable
 final class CalendarMonitor {
     private(set) var suggestion: MeetingSuggestion?
