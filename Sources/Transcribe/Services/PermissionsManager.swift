@@ -69,6 +69,7 @@ final class PermissionsManager {
     private(set) var speechRecognition: PermissionStatus = .notDetermined
     private(set) var screenRecording: PermissionStatus = .notDetermined
     private(set) var onboardingCompleted = false
+    private(set) var isOnboardingReplayActive = false
 
     private let onboardingStore: OnboardingCompletionStore
 
@@ -84,7 +85,7 @@ final class PermissionsManager {
     var grantedRequiredCount: Int { snapshot.grantedRequiredCount }
     var requiredGranted: Bool { snapshot.requiredGranted }
     var needsOnboarding: Bool {
-        snapshot.needsOnboarding(onboardingCompleted: onboardingCompleted)
+        isOnboardingReplayActive || snapshot.needsOnboarding(onboardingCompleted: onboardingCompleted)
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -132,7 +133,17 @@ final class PermissionsManager {
         screenRecording = CGRequestScreenCaptureAccess() ? .granted : .denied
     }
 
+    #if DEBUG
+    func beginOnboardingReplay() {
+        isOnboardingReplayActive = true
+    }
+    #endif
+
     func completeOnboarding() {
+        if isOnboardingReplayActive {
+            isOnboardingReplayActive = false
+            return
+        }
         guard requiredGranted else { return }
         onboardingStore.markCompleted()
         onboardingCompleted = true

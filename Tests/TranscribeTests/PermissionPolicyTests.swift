@@ -158,6 +158,44 @@ final class PermissionPolicyTests: XCTestCase {
         XCTAssertEqual(OnboardingFlow.stage(for: permissions, showCompletion: true), .complete)
     }
 
+    func testReplayWalksEveryOnboardingStageWithoutUsingRealPermissions() {
+        var replay = OnboardingReplay()
+
+        XCTAssertEqual(replay.stage, .microphone)
+        XCTAssertEqual(replay.grantedRequiredCount, 0)
+
+        replay.advance()
+        XCTAssertEqual(replay.stage, .speechRecognition)
+        XCTAssertEqual(replay.grantedRequiredCount, 1)
+
+        replay.advance()
+        XCTAssertEqual(replay.stage, .screenRecording)
+        XCTAssertEqual(replay.grantedRequiredCount, 2)
+
+        replay.advance()
+        XCTAssertEqual(replay.stage, .calendar)
+        XCTAssertEqual(replay.grantedRequiredCount, 3)
+
+        replay.advance()
+        XCTAssertEqual(replay.stage, .complete)
+        XCTAssertEqual(replay.grantedRequiredCount, 3)
+    }
+
+    @MainActor
+    func testCompletingReplayPreservesRealOnboardingCompletion() {
+        let defaults = makeDefaults()
+        OnboardingCompletionStore(defaults: defaults).markCompleted()
+        let permissions = PermissionsManager(defaults: defaults)
+
+        permissions.beginOnboardingReplay()
+        XCTAssertTrue(permissions.isOnboardingReplayActive)
+
+        permissions.completeOnboarding()
+        XCTAssertFalse(permissions.isOnboardingReplayActive)
+        XCTAssertTrue(permissions.onboardingCompleted)
+        XCTAssertTrue(defaults.bool(forKey: OnboardingCompletionStore.key))
+    }
+
     private func makeDefaults() -> UserDefaults {
         let suiteName = "PermissionPolicyTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

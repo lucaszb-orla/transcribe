@@ -81,6 +81,29 @@ enum OnboardingFlow {
     }
 }
 
+struct OnboardingReplay {
+    private(set) var stage: OnboardingStage = .microphone
+
+    var grantedRequiredCount: Int {
+        switch stage {
+        case .microphone: 0
+        case .speechRecognition: 1
+        case .screenRecording: 2
+        case .calendar, .complete: PermissionSnapshot.requiredCount
+        }
+    }
+
+    mutating func advance() {
+        switch stage {
+        case .microphone: stage = .speechRecognition
+        case .speechRecognition: stage = .screenRecording
+        case .screenRecording: stage = .calendar
+        case .calendar: stage = .complete
+        case .complete: break
+        }
+    }
+}
+
 struct OnboardingPermissionPanel: View {
     var stage: OnboardingStage
     var status: PermissionStatus
