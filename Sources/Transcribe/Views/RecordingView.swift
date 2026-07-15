@@ -120,13 +120,8 @@ struct RecordingView: View {
         .controlSize(.large)
         .padding()
         .background(.bar)
-        .confirmationDialog("Encerrar transcrição?", isPresented: $confirmEnd, titleVisibility: .visible) {
-            Button("Encerrar", role: .destructive) {
-                Task { await appState.endMeeting() }
-            }
-            Button("Continuar gravando", role: .cancel) {}
-        } message: {
-            Text("A transcrição será salva. Você pode retomá-la depois abrindo a reunião.")
+        .endMeetingConfirmation(isPresented: $confirmEnd) {
+            Task { await appState.endMeeting() }
         }
     }
 
@@ -153,6 +148,9 @@ private struct LevelMeter: View {
                     .animation(.linear(duration: 0.08), value: level)
             }
         }
+        .accessibilityElement()
+        .accessibilityLabel("Nível do microfone")
+        .accessibilityValue("\(Int(min(max(level, 0), 1) * 100)) por cento")
     }
 
     private var color: Color {

@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @State private var devices: [AudioInputDevice] = []
     @State private var locales: [Locale] = []
+    @State private var pendingPresetDelete: SummaryPreset?
 
     var body: some View {
         @Bindable var settings = appState.settings
@@ -60,20 +61,30 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Button(role: .destructive) {
-                            appState.summaryPresets.delete(preset)
+                            pendingPresetDelete = preset
                         } label: {
                             Image(systemName: "trash")
                         }
                         .buttonStyle(.borderless)
+                        .accessibilityLabel("Apagar preset")
                     }
                 }
             }
         }
         .formStyle(.grouped)
-        .frame(width: 480, height: 460)
+        .frame(minWidth: 480, minHeight: 460)
         .task {
             devices = AudioDevices.inputDevices()
             locales = (try? await SpeechTranscriber.supportedLocales) ?? []
+        }
+        .alert("Apagar preset?", isPresented: Binding(
+            get: { pendingPresetDelete != nil },
+            set: { if !$0 { pendingPresetDelete = nil } }
+        ), presenting: pendingPresetDelete) { preset in
+            Button("Apagar", role: .destructive) { appState.summaryPresets.delete(preset) }
+            Button("Cancelar", role: .cancel) {}
+        } message: { preset in
+            Text("“\(preset.name)” será apagado permanentemente.")
         }
     }
 

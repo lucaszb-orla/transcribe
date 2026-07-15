@@ -21,6 +21,7 @@
 		5F54C2DB952F5275C9D4741C /* PermissionsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA45B03615C733382CA326C8 /* PermissionsManager.swift */; };
 		661BD9294BA1AF00E2F45C3C /* TranscribeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 547BE9AED3DB2683E7130780 /* TranscribeApp.swift */; };
 		78F01AE488073D43E90A6D9A /* Meeting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 432B4400C5021E5C869167F6 /* Meeting.swift */; };
+		7D03266FBC98528DD8178676 /* ConfirmationDialogs.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2CBCFF03C743AD3FEAF7CEC /* ConfirmationDialogs.swift */; };
 		85B5D351E886D41C0E8218AD /* MeetingExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 328B1C830BB08C870B0C1F30 /* MeetingExporter.swift */; };
 		8CF2DE3041A64B6DD0C6543F /* MeetingSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB1A8E36AA8C6A47846C635E /* MeetingSummary.swift */; };
 		9745299149072E243D1A7439 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1052142EC8ED61A73D15EE78 /* AppState.swift */; };
@@ -69,6 +70,7 @@
 		AB2A51506BBE8BC72261072A /* MeetingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingDetailView.swift; sourceTree = "<group>"; };
 		B8646A7D11647B6100B6EE01 /* CallLinkDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallLinkDetector.swift; sourceTree = "<group>"; };
 		BD738AD36CCD64B8522BDEA5 /* CallLinkDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallLinkDetectorTests.swift; sourceTree = "<group>"; };
+		C2CBCFF03C743AD3FEAF7CEC /* ConfirmationDialogs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmationDialogs.swift; sourceTree = "<group>"; };
 		CB1A8E36AA8C6A47846C635E /* MeetingSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingSummary.swift; sourceTree = "<group>"; };
 		CB3AB0AF6C1BBF70B2ABE160 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		EA45B03615C733382CA326C8 /* PermissionsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsManager.swift; sourceTree = "<group>"; };
@@ -166,6 +168,7 @@
 		DF4A2198F11CFD39AB4D1D21 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				C2CBCFF03C743AD3FEAF7CEC /* ConfirmationDialogs.swift */,
 				AB2A51506BBE8BC72261072A /* MeetingDetailView.swift */,
 				A685F7F5BA510E51768863C4 /* MeetingListView.swift */,
 				06CCF9BEAEABFF77B1156892 /* MenuBarView.swift */,
@@ -277,6 +280,7 @@
 				5EC9968DF751E8EA58652ECF /* CMSampleBuffer+PCM.swift in Sources */,
 				DCA4464EF68A847A6F2815F7 /* CalendarMonitor.swift in Sources */,
 				2E5C0030FE75F6392E2C7D56 /* CallLinkDetector.swift in Sources */,
+				7D03266FBC98528DD8178676 /* ConfirmationDialogs.swift in Sources */,
 				78F01AE488073D43E90A6D9A /* Meeting.swift in Sources */,
 				CBD78366B7F3A34C72C5E38A /* MeetingDetailView.swift in Sources */,
 				85B5D351E886D41C0E8218AD /* MeetingExporter.swift in Sources */,

@@ -68,7 +68,11 @@ struct MeetingListView: View {
                             .buttonStyle(.borderedProminent)
                         }
                     } else {
-                        ContentUnavailableView.search(text: query)
+                        ContentUnavailableView {
+                            Label("Nenhum resultado", systemImage: "magnifyingglass")
+                        } description: {
+                            Text("Nenhuma reunião encontrada para “\(query)”.")
+                        }
                     }
                 }
             }
@@ -93,14 +97,14 @@ struct MeetingListView: View {
         } message: {
             Text(appState.errorMessage ?? "")
         }
-        .alert("Excluir reunião?", isPresented: Binding(
-            get: { pendingDelete != nil },
-            set: { if !$0 { pendingDelete = nil } }
-        ), presenting: pendingDelete) { meeting in
-            Button("Excluir", role: .destructive) { delete(meeting) }
-            Button("Cancelar", role: .cancel) {}
-        } message: { meeting in
-            Text("“\(meeting.title)” será excluída permanentemente. Esta ação não pode ser desfeita.")
+        .deleteMeetingConfirmation(
+            isPresented: Binding(
+                get: { pendingDelete != nil },
+                set: { if !$0 { pendingDelete = nil } }
+            ),
+            title: pendingDelete?.title ?? ""
+        ) {
+            if let pendingDelete { delete(pendingDelete) }
         }
         .onAppear { selectPendingReview() }
         .onChange(of: appState.pendingReviewMeetingID) { selectPendingReview() }

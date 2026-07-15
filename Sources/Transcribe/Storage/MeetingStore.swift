@@ -13,6 +13,10 @@ final class MeetingStore {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         directory = base.appendingPathComponent("Transcribe/Meetings", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var excluded = URLResourceValues()
+        excluded.isExcludedFromBackup = true
+        var dir = directory
+        try? dir.setResourceValues(excluded)
         reload()
     }
 
@@ -52,11 +56,6 @@ final class MeetingStore {
         return meetings.filter {
             $0.title.lowercased().contains(lowered) || $0.fullTranscriptText.lowercased().contains(lowered)
         }
-    }
-
-    /// Where a meeting's optional raw audio recording is stored, if the user opts to keep it.
-    func audioFileURL(fileName: String) -> URL {
-        directory.appendingPathComponent(fileName)
     }
 
     private func fileURL(for meeting: Meeting) -> URL {

@@ -84,17 +84,30 @@ final class AppState {
     }
 
     private func beginSession() async -> Bool {
+        // Flip to .meeting *before* the first await: this method only ever runs on the MainActor,
+        // and actors are only reentrant at suspension points, so setting this synchronously closes
+        // the window where a concurrent startMeeting/continueMeeting call (e.g. a calendar
+        // auto-start racing a manual start) could pass the `mode == .standby` guard twice and orphan
+        // the first RecordingSession (mic/screen capture left running with nothing referencing it).
+        mode = .meeting
         let session = RecordingSession()
+        // SCStream's delegate callback can land on an arbitrary queue — hop to the MainActor before
+        // touching AppState.
+        session.onSystemAudioError = { [weak self] error in
+            Task { @MainActor in
+                self?.errorMessage = "O áudio do sistema parou de ser capturado: \(error.localizedDescription)"
+            }
+        }
         recordingSession = session
         do {
             try await session.start(inputDeviceID: settings.resolvedInputDeviceID, locale: settings.transcriptionLocale)
             recordingStartedAt = Date()
-            mode = .meeting
             return true
         } catch {
             logger.error("beginSession failed: \(String(describing: error), privacy: .public)")
             errorMessage = "Não foi possível iniciar a gravação: \(error.localizedDescription)"
             recordingSession = nil
+            mode = .standby
             return false
         }
     }
@@ -137,7 +150,18 @@ final class AppState {
                 TranscriptSegment(start: $0.start + offset, text: $0.text)
             })
             updated.endedAt = endedAt
-            try? store.save(updated)
+            // The old summary/action items only cover the meeting up to the previous stop point —
+            // clear them so the detail view doesn't show a stale summary as if it were current.
+            updated.summaryBullets = []
+            updated.summaryProse = nil
+            updated.actionItems = []
+            updated.doneActionItems = nil
+            do {
+                try store.save(updated)
+            } catch {
+                logger.error("failed to save continued meeting: \(String(describing: error), privacy: .public)")
+                errorMessage = "Não foi possível salvar a reunião continuada: \(error.localizedDescription)"
+            }
             pendingReviewMeetingID = updated.id
             return
         }
@@ -153,11 +177,15 @@ final class AppState {
             participants: pendingSuggestion?.participants ?? [],
             transcript: segments,
             summaryBullets: [],
-            actionItems: [],
-            audioFileName: nil
+            actionItems: []
         )
 
-        try? store.save(meeting)
+        do {
+            try store.save(meeting)
+        } catch {
+            logger.error("failed to save meeting: \(String(describing: error), privacy: .public)")
+            errorMessage = "Não foi possível salvar a reunião: \(error.localizedDescription)"
+        }
         pendingReviewMeetingID = meeting.id
         pendingSuggestion = nil
     }

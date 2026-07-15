@@ -24,6 +24,11 @@ final class RecordingSession {
     private let transcriber = Transcriber()
     private var startedAt: Date?
 
+    /// Called if system-audio capture stops unexpectedly mid-meeting (e.g. Screen Recording
+    /// permission revoked, display disconnected) — mic audio keeps being transcribed either way,
+    /// but the caller should surface this since the other participants' audio is now missing.
+    var onSystemAudioError: ((Error) -> Void)?
+
     /// Skips feeding audio to the recognizer while paused (both capturers keep running).
     private var paused = false
 
@@ -38,17 +43,30 @@ final class RecordingSession {
         try await transcriber.start(locale: locale)
 
         logger.debug("starting mic capture…")
-        try mic.start(deviceID: inputDeviceID) { [weak self] buffer in
-            guard let self, !self.paused else { return }
-            let level = buffer.meterLevel
-            DispatchQueue.main.async { self.micLevel = level }
-            self.transcriber.ingest(buffer)
+        do {
+            try mic.start(deviceID: inputDeviceID) { [weak self] buffer in
+                guard let self, !self.paused else { return }
+                let level = buffer.meterLevel
+                DispatchQueue.main.async { self.micLevel = level }
+                self.transcriber.ingest(buffer)
+            }
+        } catch {
+            _ = await transcriber.finish()
+            throw error
         }
 
         logger.debug("starting system audio capture…")
-        try await systemAudio.start { [weak self] buffer in
-            guard let self, !self.paused else { return }
-            self.transcriber.ingest(buffer)
+        do {
+            try await systemAudio.start(onBuffer: { [weak self] buffer in
+                guard let self, !self.paused else { return }
+                self.transcriber.ingest(buffer)
+            }, onError: { [weak self] error in
+                self?.onSystemAudioError?(error)
+            })
+        } catch {
+            mic.stop()
+            _ = await transcriber.finish()
+            throw error
         }
         logger.debug("recording started")
 

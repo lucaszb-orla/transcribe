@@ -109,7 +109,9 @@ final class Transcriber {
     func finish() async -> [TranscriptSegment] {
         inputBuilder?.finish()
         try? await analyzer?.finalizeAndFinishThroughEndOfInput()
-        resultsTask?.cancel()
+        // Wait for the results loop to drain rather than cancelling it, so the last finalized
+        // segment (still hopping onto @MainActor when finalize completes) isn't dropped.
+        await resultsTask?.value
         return segments
     }
 

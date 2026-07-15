@@ -54,7 +54,7 @@ struct MeetingDetailView: View {
             }
             ToolbarItem {
                 Button("Salvar", systemImage: "checkmark") {
-                    try? appState.store.save(meeting)
+                    save()
                 }
                 .keyboardShortcut("s", modifiers: .command)
             }
@@ -64,18 +64,13 @@ struct MeetingDetailView: View {
                 }
             }
         }
-        .alert("Excluir reunião?", isPresented: $confirmDelete) {
-            Button("Excluir", role: .destructive) {
-                do {
-                    try appState.store.delete(meeting)
-                    onDelete()
-                } catch {
-                    appState.errorMessage = "Não foi possível excluir a reunião: \(error.localizedDescription)"
-                }
+        .deleteMeetingConfirmation(isPresented: $confirmDelete, title: meeting.title) {
+            do {
+                try appState.store.delete(meeting)
+                onDelete()
+            } catch {
+                appState.errorMessage = "Não foi possível excluir a reunião: \(error.localizedDescription)"
             }
-            Button("Cancelar", role: .cancel) {}
-        } message: {
-            Text("“\(meeting.title)” será excluída permanentemente. Esta ação não pode ser desfeita.")
         }
     }
 
@@ -105,6 +100,7 @@ struct MeetingDetailView: View {
         if !meeting.participants.isEmpty {
             Label(meeting.participants.joined(separator: ", "), systemImage: "person.2")
                 .lineLimit(1)
+                .help(meeting.participants.joined(separator: ", "))
         }
     }
 
@@ -248,7 +244,7 @@ struct MeetingDetailView: View {
                     let done = meeting.isActionDone(item)
                     Button {
                         withAnimation(.snappy) { meeting.toggleActionDone(item) }
-                        try? appState.store.save(meeting)
+                        save()
                     } label: {
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
                             Image(systemName: done ? "checkmark.circle.fill" : "circle")
@@ -310,6 +306,14 @@ struct MeetingDetailView: View {
             .contentShape(.rect)
         }
         .tint(.secondary)
+    }
+
+    private func save() {
+        do {
+            try appState.store.save(meeting)
+        } catch {
+            appState.errorMessage = "Não foi possível salvar a reunião: \(error.localizedDescription)"
+        }
     }
 
     private func generate() async {

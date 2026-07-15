@@ -20,7 +20,6 @@ struct Meeting: Codable, Identifiable, Hashable {
     /// Texts of the action items the user has ticked off. Optional so older saved meetings decode.
     /// ponytail: keyed by text (action items aren't editable), so duplicate texts toggle together.
     var doneActionItems: [String]? = nil
-    var audioFileName: String?
 
     /// True once a summary has been generated (either format).
     var hasSummary: Bool {

@@ -41,7 +41,6 @@ struct OnboardingView: View {
                 screenRecordingRow
             }
             .listStyle(.bordered(alternatesRowBackgrounds: true))
-            .scrollDisabled(true)
             .frame(height: 250)
 
             HStack {

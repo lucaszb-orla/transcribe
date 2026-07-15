@@ -11,9 +11,11 @@ final class SystemAudioCapture: NSObject, SCStreamOutput, SCStreamDelegate {
 
     private var stream: SCStream?
     private var onBuffer: ((AVAudioPCMBuffer) -> Void)?
+    private var onError: ((Error) -> Void)?
 
-    func start(onBuffer: @escaping (AVAudioPCMBuffer) -> Void) async throws {
+    func start(onBuffer: @escaping (AVAudioPCMBuffer) -> Void, onError: @escaping (Error) -> Void) async throws {
         self.onBuffer = onBuffer
+        self.onError = onError
 
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         guard let display = content.displays.first else {
@@ -40,10 +42,17 @@ final class SystemAudioCapture: NSObject, SCStreamOutput, SCStreamDelegate {
         try? await stream?.stopCapture()
         stream = nil
         onBuffer = nil
+        onError = nil
     }
 
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard type == .audio, sampleBuffer.isValid, let pcmBuffer = sampleBuffer.asPCMBuffer else { return }
         onBuffer?(pcmBuffer)
+    }
+
+    /// ScreenCaptureKit stopping the stream on its own (Screen Recording permission revoked mid-meeting,
+    /// display disconnected) — surface it instead of silently dropping system audio for the rest of the meeting.
+    func stream(_ stream: SCStream, didStopWithError error: Error) {
+        onError?(error)
     }
 }

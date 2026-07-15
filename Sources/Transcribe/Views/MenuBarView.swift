@@ -48,13 +48,8 @@ struct MenuBarView: View {
         .animation(.smooth, value: appState.suggestion)
         .animation(.smooth, value: appState.mode)
         .animation(.smooth, value: appState.isPaused)
-        .confirmationDialog("Encerrar transcrição?", isPresented: $confirmEnd, titleVisibility: .visible) {
-            Button("Encerrar", role: .destructive) {
-                Task { await appState.endMeeting() }
-            }
-            Button("Continuar gravando", role: .cancel) {}
-        } message: {
-            Text("A transcrição será salva. Você pode retomá-la depois abrindo a reunião.")
+        .endMeetingConfirmation(isPresented: $confirmEnd) {
+            Task { await appState.endMeeting() }
         }
     }
 
