@@ -11,7 +11,7 @@ struct TranscribeApp: App {
     var body: some Scene {
         MenuBarExtra(
             "Transcribe",
-            systemImage: appState.mode == .meeting ? "waveform.circle.fill" : "waveform.circle"
+            systemImage: appState.mode == .meeting ? "quote.bubble.fill" : "quote.bubble"
         ) {
             MenuBarView()
                 .environment(appState)

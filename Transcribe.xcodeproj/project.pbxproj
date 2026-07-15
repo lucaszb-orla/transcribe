@@ -32,6 +32,7 @@
 		DA53F7F8D9139F12C53C46FE /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3AB0AF6C1BBF70B2ABE160 /* RootView.swift */; };
 		DCA4464EF68A847A6F2815F7 /* CalendarMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02BAFC10225EA2EAFADC5905 /* CalendarMonitor.swift */; };
 		DD405BDFD63B533C843F2374 /* RecordingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BA07D1F2C3BF99DE5139873 /* RecordingSession.swift */; };
+		E725174DE2E37527D772E68C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D26FFC1863524AFAC3F4C04B /* Assets.xcassets */; };
 		FB5E38D67E0A9AC3456B2ADB /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64DCF3BF5A013561B1842837 /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
@@ -73,6 +74,7 @@
 		C2CBCFF03C743AD3FEAF7CEC /* ConfirmationDialogs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmationDialogs.swift; sourceTree = "<group>"; };
 		CB1A8E36AA8C6A47846C635E /* MeetingSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingSummary.swift; sourceTree = "<group>"; };
 		CB3AB0AF6C1BBF70B2ABE160 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		D26FFC1863524AFAC3F4C04B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EA45B03615C733382CA326C8 /* PermissionsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsManager.swift; sourceTree = "<group>"; };
 		F2EB094440EC56682557B5D9 /* Transcriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcriber.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -183,6 +185,7 @@
 		E1858354EF8E47D221F556C4 /* Transcribe */ = {
 			isa = PBXGroup;
 			children = (
+				D26FFC1863524AFAC3F4C04B /* Assets.xcassets */,
 				93F55AFDD7822EBF1457958A /* Info.plist */,
 				35D300C57CF5CD93A50DFD21 /* App */,
 				41B3AD1DCEB3B5F21B47839E /* Models */,
@@ -219,6 +222,7 @@
 			buildConfigurationList = D487038BBCA78681CBE06909 /* Build configuration list for PBXNativeTarget "Transcribe" */;
 			buildPhases = (
 				B56C793A77EE4F3EA118DEE3 /* Sources */,
+				27B9FC0899ABFB52EF70F351 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -269,6 +273,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		27B9FC0899ABFB52EF70F351 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E725174DE2E37527D772E68C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		B56C793A77EE4F3EA118DEE3 /* Sources */ = {
