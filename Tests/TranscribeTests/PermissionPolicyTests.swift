@@ -85,6 +85,42 @@ final class PermissionPolicyTests: XCTestCase {
         XCTAssertTrue(permissions.needsOnboarding(onboardingCompleted: true))
     }
 
+    func testCalendarIntegrationRemainsPendingUntilGranted() {
+        let notDetermined = PermissionSnapshot(
+            microphone: .granted,
+            speechRecognition: .granted,
+            screenRecording: .granted,
+            calendar: .notDetermined
+        )
+        let denied = PermissionSnapshot(
+            microphone: .granted,
+            speechRecognition: .granted,
+            screenRecording: .granted,
+            calendar: .denied
+        )
+
+        XCTAssertTrue(notDetermined.needsCalendarIntegration)
+        XCTAssertTrue(denied.needsCalendarIntegration)
+    }
+
+    func testCalendarAutomationOnlyBecomesAvailableAfterAuthorization() {
+        let granted = PermissionSnapshot(
+            microphone: .granted,
+            speechRecognition: .granted,
+            screenRecording: .granted,
+            calendar: .granted
+        )
+        let denied = PermissionSnapshot(
+            microphone: .granted,
+            speechRecognition: .granted,
+            screenRecording: .granted,
+            calendar: .denied
+        )
+
+        XCTAssertTrue(granted.calendarAutomationAvailable)
+        XCTAssertFalse(denied.calendarAutomationAvailable)
+    }
+
     private func makeDefaults() -> UserDefaults {
         let suiteName = "PermissionPolicyTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

@@ -42,10 +42,15 @@ struct SettingsView: View {
 
             Section {
                 Toggle("Iniciar e encerrar gravação automaticamente", isOn: $settings.autoRecordFromCalendar)
+                    .disabled(!appState.permissions.snapshot.calendarAutomationAvailable)
             } header: {
                 Text("Calendário")
             } footer: {
-                Text("Grava sozinho quando uma reunião do calendário com link de chamada começa e para no fim do evento — sem precisar clicar.")
+                if appState.permissions.snapshot.calendarAutomationAvailable {
+                    Text("Grava sozinho quando uma reunião do calendário com link de chamada começa e para no fim do evento — sem precisar clicar.")
+                } else {
+                    Text("Conecte o Calendário na tela de Reuniões para ativar esta automação.")
+                }
             }
 
             Section {

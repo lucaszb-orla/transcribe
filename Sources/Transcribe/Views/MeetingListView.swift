@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct MeetingListView: View {
@@ -34,6 +35,11 @@ struct MeetingListView: View {
             .searchable(text: $query, placement: .sidebar, prompt: "Buscar por título ou transcrição")
             .navigationTitle("Reuniões")
             .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 360)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if appState.permissions.snapshot.needsCalendarIntegration {
+                    calendarIntegrationBanner
+                }
+            }
             .safeAreaInset(edge: .bottom) {
                 Button("Nova transcrição", systemImage: "record.circle") {
                     Task { await appState.startMeeting() }
@@ -101,6 +107,31 @@ struct MeetingListView: View {
         .onChange(of: appState.pendingReviewMeetingID) { selectPendingReview() }
     }
 
+    private var calendarIntegrationBanner: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Conecte seu Calendário", systemImage: "calendar.badge.plus")
+                .font(.headline)
+            Text("Receba sugestões quando uma reunião com link estiver prestes a começar.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if appState.permissions.calendar == .denied {
+                Button("Abrir Ajustes") { openCalendarPrivacySettings() }
+                    .controlSize(.small)
+            } else {
+                Button("Conectar Calendário") {
+                    Task { await appState.requestCalendarIntegration() }
+                }
+                .controlSize(.small)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.bar)
+        .accessibilityElement(children: .contain)
+    }
+
     /// After a recording ends, jump straight to the new meeting so the user can choose summary options.
     private func selectPendingReview() {
         guard let id = appState.pendingReviewMeetingID,
@@ -116,5 +147,10 @@ struct MeetingListView: View {
         } catch {
             appState.errorMessage = "Não foi possível excluir a reunião: \(error.localizedDescription)"
         }
+    }
+
+    private func openCalendarPrivacySettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") else { return }
+        NSWorkspace.shared.open(url)
     }
 }

@@ -26,6 +26,9 @@ struct PermissionSnapshot {
         grantedRequiredCount == Self.requiredCount
     }
 
+    var needsCalendarIntegration: Bool { calendar != .granted }
+    var calendarAutomationAvailable: Bool { calendar == .granted }
+
     func needsOnboarding(onboardingCompleted: Bool) -> Bool {
         !requiredGranted || !onboardingCompleted
     }

@@ -5,11 +5,15 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppState.self) private var appState
     @Environment(PermissionsManager.self) private var permissions
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         content
             .animation(.smooth(duration: 0.35), value: appState.mode)
             .animation(.smooth(duration: 0.35), value: permissions.needsOnboarding)
+            .onChange(of: scenePhase) {
+                if scenePhase == .active { appState.syncCalendarIntegration() }
+            }
     }
 
     @ViewBuilder

@@ -42,17 +42,37 @@ final class AppState {
     var pendingReviewMeetingID: UUID?
 
     init() {
-        Task { await self.start() }
+        start()
     }
 
-    func start() async {
+    func start() {
         calendarMonitor.onNewCandidate = { [weak self] suggestion in
             Task { @MainActor in
                 guard let self, self.settings.autoRecordFromCalendar, self.mode == .standby else { return }
                 await self.startMeeting(from: suggestion)
             }
         }
-        await calendarMonitor.start()
+        syncCalendarIntegration()
+    }
+
+    /// The only entry point that requests optional Calendar access after onboarding.
+    func requestCalendarIntegration() async {
+        permissions.refresh()
+        if permissions.calendar == .notDetermined {
+            await permissions.requestCalendar()
+        }
+        syncCalendarIntegration()
+    }
+
+    /// Reconciles TCC changes made in System Settings without ever presenting a permission prompt.
+    func syncCalendarIntegration() {
+        permissions.refresh()
+        if permissions.calendar == .granted {
+            calendarMonitor.start()
+        } else {
+            calendarMonitor.stop()
+            settings.autoRecordFromCalendar = false
+        }
     }
 
     func startMeeting(from suggestion: MeetingSuggestion? = nil) async {

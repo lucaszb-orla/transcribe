@@ -30,19 +30,17 @@ final class CalendarMonitor {
     private let lookahead: TimeInterval = 3 * 60
     private let pollInterval: TimeInterval = 30
 
-    func start() async {
-        do {
-            let granted = try await store.requestFullAccessToEvents()
-            guard granted else {
-                authorizationDenied = true
-                return
-            }
-        } catch {
-            authorizationDenied = true
+    func start() {
+        let status = EKEventStore.authorizationStatus(for: .event)
+        guard status == .fullAccess else {
+            authorizationDenied = status == .denied || status == .restricted
+            stop()
             return
         }
 
+        authorizationDenied = false
         checkNow()
+        guard timer == nil else { return }
         let timer = Timer(timeInterval: pollInterval, repeats: true) { [weak self] _ in
             self?.checkNow()
         }
@@ -53,6 +51,7 @@ final class CalendarMonitor {
     func stop() {
         timer?.invalidate()
         timer = nil
+        suggestion = nil
     }
 
     func dismissCurrentSuggestion() {
