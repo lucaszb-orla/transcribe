@@ -121,6 +121,43 @@ final class PermissionPolicyTests: XCTestCase {
         XCTAssertFalse(denied.calendarAutomationAvailable)
     }
 
+    func testOnboardingPresentsRequiredPermissionsInOrder() {
+        let microphone = PermissionSnapshot(
+            microphone: .notDetermined,
+            speechRecognition: .notDetermined,
+            screenRecording: .notDetermined,
+            calendar: .notDetermined
+        )
+        let speech = PermissionSnapshot(
+            microphone: .granted,
+            speechRecognition: .notDetermined,
+            screenRecording: .notDetermined,
+            calendar: .notDetermined
+        )
+        let screen = PermissionSnapshot(
+            microphone: .granted,
+            speechRecognition: .granted,
+            screenRecording: .notDetermined,
+            calendar: .notDetermined
+        )
+
+        XCTAssertEqual(OnboardingFlow.stage(for: microphone), .microphone)
+        XCTAssertEqual(OnboardingFlow.stage(for: speech), .speechRecognition)
+        XCTAssertEqual(OnboardingFlow.stage(for: screen), .screenRecording)
+    }
+
+    func testCalendarFollowsTheThreeRequiredPermissionsAsOptionalStep() {
+        let permissions = PermissionSnapshot(
+            microphone: .granted,
+            speechRecognition: .granted,
+            screenRecording: .granted,
+            calendar: .notDetermined
+        )
+
+        XCTAssertEqual(OnboardingFlow.stage(for: permissions), .calendar)
+        XCTAssertEqual(OnboardingFlow.stage(for: permissions, showCompletion: true), .complete)
+    }
+
     private func makeDefaults() -> UserDefaults {
         let suiteName = "PermissionPolicyTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
