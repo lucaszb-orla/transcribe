@@ -122,10 +122,15 @@ struct SettingsView: View {
                     NSApp.activate(ignoringOtherApps: true)
                 }
                 .accessibilityHint("Mostra todas as etapas sem solicitar novamente as permissões do macOS")
+                .disabled(appState.mode == .meeting)
             } header: {
                 Text("Desenvolvimento")
             } footer: {
-                Text("Reproduz o onboarding completo sem alterar as permissões ou a conclusão já salva.")
+                if appState.mode == .meeting {
+                    Text("Encerre a transcrição atual para rever o onboarding.")
+                } else {
+                    Text("Reproduz o onboarding completo sem alterar as permissões ou a conclusão já salva.")
+                }
             }
             #endif
         }
