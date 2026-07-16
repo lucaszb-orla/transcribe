@@ -26,9 +26,10 @@ struct MeetingDetailView: View {
     @State private var specsExpanded = true
     @State private var generatingSpecs = false
     @State private var specsError: String?
-    @State private var activeRun: ActiveRun?
-
-    private struct ActiveRun: Identifiable { let id: UUID }
+    @State private var openingSpecID: UUID?
+    /// One repo for the whole meeting — a meeting is realistically about a single project, so
+    /// picking per-spec was busywork. Pre-filled from the last repo used anywhere in the app.
+    @State private var repoPath: String?
 
     var body: some View {
         ScrollView {
@@ -44,8 +45,10 @@ struct MeetingDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(.background)
-        .sheet(item: $activeRun) { run in
-            devSpecRunSheet(specID: run.id)
+        .onAppear {
+            if repoPath == nil {
+                repoPath = meeting.devSpecsOrEmpty.compactMap(\.repoPath).first ?? appState.settings.lastUsedRepoPath
+            }
         }
         .toolbar {
             ToolbarItem {
@@ -298,10 +301,17 @@ struct MeetingDetailView: View {
                         .foregroundStyle(.red)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                repoRow
                 if meeting.devSpecsOrEmpty.isEmpty {
                     Text("Nenhuma spec gerada ainda.")
                         .foregroundStyle(.secondary)
                 } else {
+                    HStack {
+                        Spacer()
+                        Button("Rodar tudo", systemImage: "play.fill") { runAll() }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(repoPath == nil)
+                    }
                     ForEach(meeting.devSpecsOrEmpty) { spec in
                         devSpecCard(spec)
                     }
@@ -310,47 +320,35 @@ struct MeetingDetailView: View {
         }
     }
 
+    /// One repo path shared by every spec in this meeting — pick it once here instead of per card.
+    private var repoRow: some View {
+        HStack {
+            Text(repoPath ?? "Nenhum repositório escolhido")
+                .font(.callout)
+                .foregroundStyle(repoPath == nil ? .secondary : .primary)
+                .lineLimit(1)
+                .truncationMode(.head)
+            Spacer()
+            Button("Escolher repositório…") { chooseRepo() }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+        }
+    }
+
     private func devSpecCard(_ spec: DevSpec) -> some View {
-        let running = appState.devSpecRuns[spec.id]?.isRunning == true
-        return VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(spec.title).font(.headline)
             Text(spec.description)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack {
-                Text(spec.repoPath ?? "Nenhum repositório escolhido")
-                    .font(.callout)
-                    .foregroundStyle(spec.repoPath == nil ? .secondary : .primary)
-                    .lineLimit(1)
-                    .truncationMode(.head)
                 Spacer()
-                Button("Escolher…") { chooseRepo(for: spec.id) }
-                    .buttonStyle(.borderless)
-                    .controlSize(.small)
-            }
-
-            HStack {
-                if let result = spec.result, !running {
-                    if result.status == .success, let urlString = result.prURL, let url = URL(string: urlString) {
-                        Button("Abrir PR", systemImage: "arrow.up.right.square") {
-                            NSWorkspace.shared.open(url)
-                        }
-                        .buttonStyle(.link)
-                    } else {
-                        Label(result.message, systemImage: "exclamationmark.triangle.fill")
-                            .font(.callout)
-                            .foregroundStyle(.red)
-                    }
-                }
-                Spacer()
-                Button("Rodar", systemImage: "play.fill") {
-                    guard let repoPath = spec.repoPath else { return }
-                    appState.runDevSpec(spec, in: meeting, repoPath: repoPath)
-                    activeRun = ActiveRun(id: spec.id)
+                Button("Abrir no Claude Code", systemImage: "terminal") {
+                    Task { await openInTerminal(spec) }
                 }
                 .buttonStyle(.bordered)
-                .disabled(spec.repoPath == nil || running)
+                .disabled(repoPath == nil || openingSpecID == spec.id)
             }
         }
         .padding(12)
@@ -358,64 +356,46 @@ struct MeetingDetailView: View {
         .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
     }
 
-    @ViewBuilder
-    private func devSpecRunSheet(specID: UUID) -> some View {
-        if let state = appState.devSpecRuns[specID] {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Rodando automação").font(.headline)
-
-                ScrollView {
-                    Text(state.log.isEmpty ? "Aguardando…" : state.log)
-                        .font(.system(.callout, design: .monospaced))
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .frame(minWidth: 480, minHeight: 320)
-                .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
-
-                if state.isRunning {
-                    ProgressView().controlSize(.small)
-                } else if let result = state.result {
-                    if result.status == .success, let urlString = result.prURL, let url = URL(string: urlString) {
-                        Button("Abrir PR", systemImage: "arrow.up.right.square") {
-                            NSWorkspace.shared.open(url)
-                        }
-                        .buttonStyle(.borderedProminent)
-                    } else {
-                        Label(result.message, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.red)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                } else if let errorMessage = state.errorMessage {
-                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                HStack {
-                    Spacer()
-                    Button("Fechar") { activeRun = nil }
-                }
-            }
-            .padding(20)
-        }
-    }
-
-    private func chooseRepo(for specID: UUID) {
+    private func chooseRepo() {
         NSApp.activate(ignoringOtherApps: true)
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.prompt = "Escolher"
-        if let last = appState.settings.lastUsedRepoPath {
-            panel.directoryURL = URL(fileURLWithPath: last)
+        if let current = repoPath ?? appState.settings.lastUsedRepoPath {
+            panel.directoryURL = URL(fileURLWithPath: current)
         }
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        guard var spec = meeting.devSpecsOrEmpty.first(where: { $0.id == specID }) else { return }
-        spec.repoPath = url.path
-        meeting.updateDevSpec(spec)
+        repoPath = url.path
+        appState.settings.lastUsedRepoPath = url.path
+        for spec in meeting.devSpecsOrEmpty {
+            var updated = spec
+            updated.repoPath = url.path
+            meeting.updateDevSpec(updated)
+        }
         save()
+    }
+
+    /// Opens a Terminal window for every spec against the shared repo, one after another.
+    private func runAll() {
+        Task {
+            for spec in meeting.devSpecsOrEmpty {
+                await openInTerminal(spec)
+            }
+        }
+    }
+
+    private func openInTerminal(_ spec: DevSpec) async {
+        guard let repoPath else { return }
+        openingSpecID = spec.id
+        specsError = nil
+        defer { openingSpecID = nil }
+        do {
+            try await appState.openDevSpecInTerminal(spec, in: meeting, repoPath: repoPath)
+        } catch {
+            specsError = error.localizedDescription
+        }
     }
 
     private func generateSpecs() async {
@@ -423,8 +403,16 @@ struct MeetingDetailView: View {
         specsError = nil
         defer { generatingSpecs = false }
         do {
-            let updated = try await appState.generateDevSpecs(for: meeting)
+            var updated = try await appState.generateDevSpecs(for: meeting)
+            if let repoPath {
+                for spec in updated.devSpecsOrEmpty {
+                    var withRepo = spec
+                    withRepo.repoPath = repoPath
+                    updated.updateDevSpec(withRepo)
+                }
+            }
             withAnimation(.smooth) { meeting = updated }
+            save()
         } catch {
             specsError = error.localizedDescription
         }

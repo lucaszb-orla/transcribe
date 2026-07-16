@@ -15,28 +15,27 @@ final class ClaudeCodeRunnerTests: XCTestCase {
         XCTAssertTrue(branch.hasPrefix("transcribe/tarefa-"))
     }
 
-    func testDescribeEventExtractsAssistantText() {
-        let line = #"{"type":"assistant","message":{"content":[{"type":"text","text":"Implementando o endpoint"}]}}"#
-        XCTAssertEqual(ClaudeCodeRunner.describeEvent(line), "Implementando o endpoint")
+    func testBuildScriptContainsRepoAndBranchAndCommand() {
+        let spec = DevSpec(title: "Adicionar endpoint /health", description: "Retorna OK")
+        let branch = ClaudeCodeRunner.branchName(for: spec)
+        let script = ClaudeCodeRunner.buildScript(
+            spec: spec,
+            branch: branch,
+            meetingMarkdown: "# Reunião\n\nConteúdo de teste",
+            repoPath: "/tmp/some repo"
+        )
+        XCTAssertTrue(script.hasPrefix("#!/bin/zsh"))
+        XCTAssertTrue(script.contains("cd '/tmp/some repo'"))
+        XCTAssertTrue(script.contains(branch))
+        XCTAssertTrue(script.contains("claude -p \"$PROMPT\""))
+        XCTAssertTrue(script.contains("Conteúdo de teste"))
     }
 
-    func testDescribeEventExtractsToolUseCommand() {
-        let line = #"{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"git commit -m x"}}]}}"#
-        XCTAssertEqual(ClaudeCodeRunner.describeEvent(line), "→ git commit -m x")
-    }
-
-    func testDescribeEventIgnoresUnknownEventTypes() {
-        let line = #"{"type":"system","subtype":"init"}"#
-        XCTAssertNil(ClaudeCodeRunner.describeEvent(line))
-    }
-
-    func testFinalResultTextExtractsResultLine() {
-        let line = #"{"type":"result","subtype":"success","is_error":false,"result":"PR aberta: https://github.com/x/y/pull/1"}"#
-        XCTAssertEqual(ClaudeCodeRunner.finalResultText(line), "PR aberta: https://github.com/x/y/pull/1")
-    }
-
-    func testFinalResultTextNilForNonResultLine() {
-        let line = #"{"type":"assistant","message":{"content":[]}}"#
-        XCTAssertNil(ClaudeCodeRunner.finalResultText(line))
+    func testBuildScriptUsesDistinctDelimitersPerSpec() {
+        let specA = DevSpec(title: "A", description: "")
+        let specB = DevSpec(title: "B", description: "")
+        let scriptA = ClaudeCodeRunner.buildScript(spec: specA, branch: "x", meetingMarkdown: "", repoPath: "/tmp/r")
+        let scriptB = ClaudeCodeRunner.buildScript(spec: specB, branch: "x", meetingMarkdown: "", repoPath: "/tmp/r")
+        XCTAssertNotEqual(scriptA, scriptB)
     }
 }
