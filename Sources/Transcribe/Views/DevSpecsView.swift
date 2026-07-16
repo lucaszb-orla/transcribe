@@ -78,8 +78,6 @@ struct DevSpecsView: View {
 
     private var optionsForm: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Specs de implementação", systemImage: "hammer").font(.headline)
-
             Group {
                 Picker("Gerar com", selection: $options.provider) {
                     ForEach(SpecProvider.allCases) { Text($0.label).tag($0) }
@@ -125,7 +123,10 @@ struct DevSpecsView: View {
                             )
                         }
                     }
-                    .buttonStyle(.borderedProminent)
+                    // .bordered, not .borderedProminent: once specs exist, "Rodar tudo" below is the
+                    // one action that should stand out — two competing prominent buttons on screen
+                    // dilutes both.
+                    .buttonStyle(.bordered)
                     .disabled(generatingSpecs || meeting.fullTranscriptText.isEmpty)
                     .help(meeting.devSpecsOrEmpty.isEmpty ? "" : "Substitui as specs atuais (edições incluídas) por uma nova lista")
                 }
@@ -171,7 +172,7 @@ struct DevSpecsView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 TextField("Título", text: titleBinding(spec.id))
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.roundedBorder)
                     .font(.headline)
                 Spacer()
                 Button {
@@ -185,7 +186,7 @@ struct DevSpecsView: View {
                 .help("Remover spec")
             }
             TextField("Descrição", text: descriptionBinding(spec.id), axis: .vertical)
-                .textFieldStyle(.plain)
+                .textFieldStyle(.roundedBorder)
                 .foregroundStyle(.secondary)
                 .lineLimit(1...6)
 
