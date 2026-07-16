@@ -10,19 +10,35 @@ struct TranscriptBubbleList: View {
     var pendingMe: String = ""
     var pendingOthers: String = ""
 
+    /// Width of the conversation column, read via a background GeometryReader (doesn't affect this
+    /// VStack's own layout, since it's already sized by `.frame(maxWidth: .infinity)` below). Bubbles
+    /// cap themselves to a fraction of this so they read like WhatsApp/iMessage — hug their content up
+    /// to a max, not stretch edge-to-edge — no matter how wide the window gets.
+    @State private var availableWidth: CGFloat = 0
+
+    private var maxBubbleWidth: CGFloat {
+        min(max(availableWidth * 0.7, 220), 480)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             ForEach(Self.grouped(segments)) { group in
-                TranscriptBubble(speaker: group.speaker, text: group.text, start: group.start)
+                TranscriptBubble(speaker: group.speaker, text: group.text, start: group.start, maxBubbleWidth: maxBubbleWidth)
             }
             if !pendingMe.isEmpty {
-                TranscriptBubble(speaker: .me, text: pendingMe, start: nil, isPending: true)
+                TranscriptBubble(speaker: .me, text: pendingMe, start: nil, isPending: true, maxBubbleWidth: maxBubbleWidth)
             }
             if !pendingOthers.isEmpty {
-                TranscriptBubble(speaker: .others, text: pendingOthers, start: nil, isPending: true)
+                TranscriptBubble(speaker: .others, text: pendingOthers, start: nil, isPending: true, maxBubbleWidth: maxBubbleWidth)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(key: AvailableWidthKey.self, value: proxy.size.width)
+            }
+        )
+        .onPreferenceChange(AvailableWidthKey.self) { availableWidth = $0 }
     }
 
     private struct Group: Identifiable {
@@ -55,6 +71,7 @@ private struct TranscriptBubble: View {
     let text: String
     let start: TimeInterval?
     var isPending: Bool = false
+    var maxBubbleWidth: CGFloat
 
     var body: some View {
         switch speaker {
@@ -82,6 +99,7 @@ private struct TranscriptBubble: View {
                 Text(Self.mmss(start)).font(.caption2).opacity(0.7)
             }
         }
+        .frame(maxWidth: maxBubbleWidth, alignment: .leading)
         .foregroundStyle(foreground)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -92,5 +110,13 @@ private struct TranscriptBubble: View {
     private static func mmss(_ seconds: TimeInterval) -> String {
         let s = max(0, Int(seconds))
         return String(format: "%02d:%02d", s / 60, s % 60)
+    }
+}
+
+/// Reads the conversation column's actual width without disturbing layout (see usage above).
+private struct AvailableWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
