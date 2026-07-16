@@ -23,6 +23,13 @@ xcodebuild -project Transcribe.xcodeproj -scheme Transcribe -configuration Debug
 open ~/Library/Developer/Xcode/DerivedData/Transcribe-*/Build/Products/Debug/Transcribe.app
 ```
 
+- **Pra aparecer no Spotlight/Launchpad:** o build fica em `DerivedData`, que não é indexado. Depois de
+  buildar, copia pra `/Applications` (preserva a assinatura com `ditto`, não `cp`):
+  ```sh
+  ditto ~/Library/Developer/Xcode/DerivedData/Transcribe-*/Build/Products/Debug/Transcribe.app /Applications/Transcribe.app
+  ```
+  A partir daí abra/rode o de `/Applications` (não o de `DerivedData`), pra não ter duas cópias
+  divergentes. Repita a cada rebuild.
 - **Assinatura (crítico):** `DEVELOPMENT_TEAM` em `project.yml` = `7QTC8MU95P` (personal team). Sem uma
   identidade estável, cada rebuild muda a assinatura ad-hoc e o macOS **zera as permissões (TCC)**,
   que era a causa do "toda vez pede permissão de novo". Sempre buildar com `-allowProvisioningUpdates`.
