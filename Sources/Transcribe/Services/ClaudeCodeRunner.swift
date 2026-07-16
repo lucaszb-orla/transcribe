@@ -30,7 +30,10 @@ enum ClaudeCodeRunner {
         try await checkRepo(at: repoPath)
         let branch = branchName(for: spec)
         let script = buildScript(spec: spec, branch: branch, meetingMarkdown: meetingMarkdown, repoPath: repoPath)
-        let url = try writeScript(script)
+        // Named after the branch slug (not a raw UUID) so Terminal's window title identifies which
+        // spec is running when several are open at once — a `.command`'s filename is its title.
+        let fileName = branch.replacingOccurrences(of: "transcribe/", with: "")
+        let url = try writeScript(script, named: fileName)
         NSWorkspace.shared.open(url)
     }
 
@@ -96,10 +99,11 @@ enum ClaudeCodeRunner {
         "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
-    private static func writeScript(_ content: String) throws -> URL {
+    private static func writeScript(_ content: String, named fileName: String) throws -> URL {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("Transcribe", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let url = dir.appendingPathComponent("claude-run-\(UUID().uuidString).command")
+        let safeName = fileName.isEmpty ? "claude-run-\(UUID().uuidString)" : fileName
+        let url = dir.appendingPathComponent("\(safeName).command")
         do {
             try content.write(to: url, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)

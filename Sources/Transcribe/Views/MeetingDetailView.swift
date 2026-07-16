@@ -27,9 +27,25 @@ struct MeetingDetailView: View {
     @State private var generatingSpecs = false
     @State private var specsError: String?
     @State private var openingSpecID: UUID?
+    @State private var recentlyOpenedSpecID: UUID?
+    @State private var confirmingRun: ConfirmingRun?
     /// One repo for the whole meeting — a meeting is realistically about a single project, so
     /// picking per-spec was busywork. Pre-filled from the last repo used anywhere in the app.
     @State private var repoPath: String?
+
+    /// Running Claude Code autonomously (commit/push/PR) is consequential enough to confirm first —
+    /// there's no in-app undo for it, the consequences land in the user's own repo/GitHub.
+    private enum ConfirmingRun: Identifiable {
+        case all(count: Int)
+        case one(DevSpec)
+
+        var id: String {
+            switch self {
+            case .all: return "all"
+            case .one(let spec): return spec.id.uuidString
+            }
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -49,6 +65,16 @@ struct MeetingDetailView: View {
             if repoPath == nil {
                 repoPath = meeting.devSpecsOrEmpty.compactMap(\.repoPath).first ?? appState.settings.lastUsedRepoPath
             }
+        }
+        .alert(
+            confirmingRunTitle,
+            isPresented: Binding(get: { confirmingRun != nil }, set: { if !$0 { confirmingRun = nil } }),
+            presenting: confirmingRun
+        ) { run in
+            Button("Rodar") { confirm(run) }
+            Button("Cancelar", role: .cancel) {}
+        } message: { run in
+            Text(confirmMessage(for: run))
         }
         .toolbar {
             ToolbarItem {
@@ -285,7 +311,7 @@ struct MeetingDetailView: View {
                 if generatingSpecs {
                     ProgressView().controlSize(.small)
                 } else {
-                    Label("Gerar specs", systemImage: "sparkles")
+                    Label("Gerar specs", systemImage: "wand.and.stars")
                 }
             }
             .buttonStyle(.borderless)
@@ -308,9 +334,11 @@ struct MeetingDetailView: View {
                 } else {
                     HStack {
                         Spacer()
-                        Button("Rodar tudo", systemImage: "play.fill") { runAll() }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(repoPath == nil)
+                        Button("Rodar tudo", systemImage: "play.fill") {
+                            confirmingRun = .all(count: meeting.devSpecsOrEmpty.count)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(repoPath == nil)
                     }
                     ForEach(meeting.devSpecsOrEmpty) { spec in
                         devSpecCard(spec)
@@ -343,9 +371,15 @@ struct MeetingDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack {
+                if recentlyOpenedSpecID == spec.id {
+                    Label("Aberto no Terminal", systemImage: "checkmark.circle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.green)
+                        .transition(.opacity)
+                }
                 Spacer()
                 Button("Abrir no Claude Code", systemImage: "terminal") {
-                    Task { await openInTerminal(spec) }
+                    confirmingRun = .one(spec)
                 }
                 .buttonStyle(.bordered)
                 .disabled(repoPath == nil || openingSpecID == spec.id)
@@ -377,6 +411,32 @@ struct MeetingDetailView: View {
         save()
     }
 
+    private var confirmingRunTitle: String {
+        switch confirmingRun {
+        case .all(let count): return count == 1 ? "Rodar automação?" : "Rodar \(count) automações?"
+        case .one, .none: return "Rodar automação?"
+        }
+    }
+
+    private func confirmMessage(for run: ConfirmingRun) -> String {
+        let repo = repoPath ?? ""
+        let windows: String
+        switch run {
+        case .all(let count): windows = count == 1 ? "um Terminal" : "\(count) Terminais"
+        case .one: windows = "um Terminal"
+        }
+        return "Isso vai abrir \(windows) e deixar o Claude Code implementar, commitar, dar push e abrir Pull Request sozinho em \u{201c}\(repo)\u{201d}."
+    }
+
+    private func confirm(_ run: ConfirmingRun) {
+        switch run {
+        case .all:
+            runAll()
+        case .one(let spec):
+            Task { await openInTerminal(spec) }
+        }
+    }
+
     /// Opens a Terminal window for every spec against the shared repo, one after another.
     private func runAll() {
         Task {
@@ -393,6 +453,13 @@ struct MeetingDetailView: View {
         defer { openingSpecID = nil }
         do {
             try await appState.openDevSpecInTerminal(spec, in: meeting, repoPath: repoPath)
+            withAnimation(.smooth) { recentlyOpenedSpecID = spec.id }
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                if recentlyOpenedSpecID == spec.id {
+                    withAnimation(.smooth) { recentlyOpenedSpecID = nil }
+                }
+            }
         } catch {
             specsError = error.localizedDescription
         }
