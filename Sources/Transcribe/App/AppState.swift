@@ -225,10 +225,11 @@ final class AppState {
     }
 
     /// Splits a saved meeting into candidate dev specs and persists them. Returns the updated meeting.
-    func generateDevSpecs(for meeting: Meeting) async throws -> Meeting {
+    func generateDevSpecs(for meeting: Meeting, options: DevSpecOptions) async throws -> Meeting {
         let specs = try await Summarizer.generateDevSpecs(
             transcript: meeting.fullTranscriptText,
-            calendarContext: Self.calendarContext(for: meeting)
+            calendarContext: Self.calendarContext(for: meeting),
+            customInstructions: options.customInstructions
         )
         var updated = meeting
         updated.devSpecs = specs
@@ -238,15 +239,22 @@ final class AppState {
 
     /// Opens a real Terminal window running `claude -p` for this spec inside `repoPath` — the user
     /// watches (and can take over) the run directly rather than the app babysitting a subprocess.
-    func openDevSpecInTerminal(_ spec: DevSpec, in meeting: Meeting, repoPath: String) async throws {
+    /// Returns the updated, saved meeting (with the spec's dispatch time recorded).
+    func openDevSpecInTerminal(_ spec: DevSpec, in meeting: Meeting, repoPath: String, options: DevSpecOptions) async throws -> Meeting {
         settings.lastUsedRepoPath = repoPath
         var spec = spec
         spec.repoPath = repoPath
         try await ClaudeCodeRunner.openInTerminal(
             spec: spec,
             meetingMarkdown: MeetingExporter.markdown(meeting),
-            repoPath: repoPath
+            repoPath: repoPath,
+            options: options
         )
+        spec.lastDispatchedAt = Date()
+        var updated = meeting
+        updated.updateDevSpec(spec)
+        try store.save(updated)
+        return updated
     }
 
     private static func calendarContext(for meeting: Meeting) -> String? {

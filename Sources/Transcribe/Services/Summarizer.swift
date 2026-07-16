@@ -55,13 +55,8 @@ enum Summarizer {
     /// Splits a meeting transcript into distinct implementation tasks (title + short description).
     /// Deliberately lightweight: the on-device model just separates the meeting into distinct asks,
     /// the actual engineering synthesis happens later when Claude Code reads the full transcript.
-    static func generateDevSpecs(transcript: String, calendarContext: String?) async throws -> [DevSpec] {
-        let session = try makeSession {
-            "Você analisa transcrições de reuniões de trabalho em português do Brasil e identifica " +
-            "tarefas de implementação de software distintas mencionadas nela, sem inventar informação " +
-            "que não está no texto. Se a reunião não mencionar nada acionável para desenvolvimento, " +
-            "devolva a lista vazia."
-        }
+    static func generateDevSpecs(transcript: String, calendarContext: String?, customInstructions: String = "") async throws -> [DevSpec] {
+        let session = try makeSession { devSpecInstructions(customInstructions: customInstructions) }
 
         var prompt = "Transcrição da reunião:\n\(transcript)"
         if let calendarContext, !calendarContext.isEmpty {
@@ -81,6 +76,20 @@ enum Summarizer {
             throw SummarizerError.modelUnavailable(.deviceNotEligible)
         }
         return LanguageModelSession(model: model) { instructions() }
+    }
+
+    private static func devSpecInstructions(customInstructions: String) -> String {
+        var lines = [
+            "Você analisa transcrições de reuniões de trabalho em português do Brasil e identifica",
+            "tarefas de implementação de software distintas mencionadas nela, sem inventar informação",
+            "que não está no texto. Se a reunião não mencionar nada acionável para desenvolvimento,",
+            "devolva a lista vazia.",
+        ]
+        let custom = customInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !custom.isEmpty {
+            lines.append("Instruções adicionais do usuário: \(custom)")
+        }
+        return lines.joined(separator: " ")
     }
 
     private static func instructions(_ options: SummaryOptions) -> String {

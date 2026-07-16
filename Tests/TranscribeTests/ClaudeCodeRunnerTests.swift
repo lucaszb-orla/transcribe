@@ -22,20 +22,22 @@ final class ClaudeCodeRunnerTests: XCTestCase {
             spec: spec,
             branch: branch,
             meetingMarkdown: "# Reunião\n\nConteúdo de teste",
-            repoPath: "/tmp/some repo"
+            repoPath: "/tmp/some repo",
+            options: DevSpecOptions(model: .opus, effort: .high)
         )
         XCTAssertTrue(script.hasPrefix("#!/bin/zsh"))
         XCTAssertTrue(script.contains("cd '/tmp/some repo'"))
         XCTAssertTrue(script.contains(branch))
-        XCTAssertTrue(script.contains("claude -p \"$PROMPT\""))
+        XCTAssertTrue(script.contains("claude -p \"$PROMPT\" --model opus --effort high"))
         XCTAssertTrue(script.contains("Conteúdo de teste"))
     }
 
     func testBuildScriptUsesDistinctDelimitersPerSpec() {
         let specA = DevSpec(title: "A", description: "")
         let specB = DevSpec(title: "B", description: "")
-        let scriptA = ClaudeCodeRunner.buildScript(spec: specA, branch: "x", meetingMarkdown: "", repoPath: "/tmp/r")
-        let scriptB = ClaudeCodeRunner.buildScript(spec: specB, branch: "x", meetingMarkdown: "", repoPath: "/tmp/r")
+        let options = DevSpecOptions()
+        let scriptA = ClaudeCodeRunner.buildScript(spec: specA, branch: "x", meetingMarkdown: "", repoPath: "/tmp/r", options: options)
+        let scriptB = ClaudeCodeRunner.buildScript(spec: specB, branch: "x", meetingMarkdown: "", repoPath: "/tmp/r", options: options)
         XCTAssertNotEqual(scriptA, scriptB)
     }
 }

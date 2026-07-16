@@ -8,6 +8,14 @@ import os
 enum ClaudeCodeRunner {
     private static let log = Logger(subsystem: "com.lucasbaggiotto.Transcribe", category: "ClaudeCodeRunner")
 
+    enum DevSpecStatus: Equatable {
+        case notStarted
+        case dispatched
+        case prOpen(url: String)
+        case prMerged(url: String)
+        case prClosed(url: String)
+    }
+
     enum RunnerError: LocalizedError {
         case repoNotFound
         case repoDirty
@@ -26,15 +34,41 @@ enum ClaudeCodeRunner {
     /// opens it in Terminal. `git` is looked up at its fixed system path — no PATH resolution needed
     /// since Terminal itself (not this process) is what ends up running `claude`/`gh`.
     @MainActor
-    static func openInTerminal(spec: DevSpec, meetingMarkdown: String, repoPath: String) async throws {
+    static func openInTerminal(spec: DevSpec, meetingMarkdown: String, repoPath: String, options: DevSpecOptions) async throws {
         try await checkRepo(at: repoPath)
         let branch = branchName(for: spec)
-        let script = buildScript(spec: spec, branch: branch, meetingMarkdown: meetingMarkdown, repoPath: repoPath)
+        let script = buildScript(spec: spec, branch: branch, meetingMarkdown: meetingMarkdown, repoPath: repoPath, options: options)
         // Named after the branch slug (not a raw UUID) so Terminal's window title identifies which
         // spec is running when several are open at once — a `.command`'s filename is its title.
         let fileName = branch.replacingOccurrences(of: "transcribe/", with: "")
         let url = try writeScript(script, named: fileName)
         NSWorkspace.shared.open(url)
+    }
+
+    /// A quick, read-only look at whether a previously-dispatched spec has an open/merged/closed PR
+    /// yet. Never throws — worst case it just reports `.dispatched` (sent, nothing found yet).
+    static func checkStatus(spec: DevSpec, repoPath: String) async -> DevSpecStatus {
+        guard spec.lastDispatchedAt != nil else { return .notStarted }
+        guard let gh = await resolveGH() else { return .dispatched }
+        let branch = branchName(for: spec)
+        guard let (out, rc) = try? await runProcess(gh, ["-C", repoPath, "pr", "view", branch, "--json", "url,state", "-q", ".url + \"|\" + .state"]),
+              rc == 0 else { return .dispatched }
+        let parts = out.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "|", maxSplits: 1)
+        guard parts.count == 2 else { return .dispatched }
+        let url = String(parts[0])
+        switch String(parts[1]) {
+        case "MERGED": return .prMerged(url: url)
+        case "CLOSED": return .prClosed(url: url)
+        default: return .prOpen(url: url)
+        }
+    }
+
+    /// `gh` (unlike `git`) isn't at a fixed system path — resolve it via a login shell, same reason
+    /// the old headless runner had to: this app process doesn't inherit the user's shell PATH.
+    private static func resolveGH() async -> String? {
+        guard let (out, rc) = try? await runProcess("/bin/zsh", ["-l", "-c", "command -v gh"]), rc == 0 else { return nil }
+        let path = out.trimmingCharacters(in: .whitespacesAndNewlines)
+        return path.isEmpty ? nil : path
     }
 
     // MARK: - Preflight
@@ -65,7 +99,7 @@ enum ClaudeCodeRunner {
 
     // MARK: - Script
 
-    static func buildScript(spec: DevSpec, branch: String, meetingMarkdown: String, repoPath: String) -> String {
+    static func buildScript(spec: DevSpec, branch: String, meetingMarkdown: String, repoPath: String, options: DevSpecOptions) -> String {
         let promptDelimiter = "TRANSCRIBE_PROMPT_\(spec.id.uuidString.prefix(8))"
         let contextDelimiter = "TRANSCRIBE_CONTEXT_\(spec.id.uuidString.prefix(8))"
         let prompt = """
@@ -88,7 +122,7 @@ enum ClaudeCodeRunner {
         \(prompt)
         \(promptDelimiter)
         )
-        cat <<'\(contextDelimiter)' | claude -p "$PROMPT" --permission-mode acceptEdits --allowedTools Bash
+        cat <<'\(contextDelimiter)' | claude -p "$PROMPT" --model \(options.model.rawValue) --effort \(options.effort.rawValue) --permission-mode acceptEdits --allowedTools Bash
         \(meetingMarkdown)
         \(contextDelimiter)
         exec zsh -l

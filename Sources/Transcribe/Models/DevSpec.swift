@@ -6,4 +6,6 @@ struct DevSpec: Codable, Identifiable, Hashable {
     var title: String
     var description: String
     var repoPath: String? = nil
+    /// When this spec was last handed off to Claude Code. Nil means it's never been run.
+    var lastDispatchedAt: Date? = nil
 }

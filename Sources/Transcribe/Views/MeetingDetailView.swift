@@ -23,94 +23,69 @@ struct MeetingDetailView: View {
     @State private var transcriptExpanded = false
     @State private var editingTranscript = false
 
-    @State private var specsExpanded = true
-    @State private var generatingSpecs = false
-    @State private var specsError: String?
-    @State private var openingSpecID: UUID?
-    @State private var recentlyOpenedSpecID: UUID?
-    @State private var confirmingRun: ConfirmingRun?
-    /// One repo for the whole meeting — a meeting is realistically about a single project, so
-    /// picking per-spec was busywork. Pre-filled from the last repo used anywhere in the app.
-    @State private var repoPath: String?
+    @State private var showingSpecs = false
 
-    /// Running Claude Code autonomously (commit/push/PR) is consequential enough to confirm first —
-    /// there's no in-app undo for it, the consequences land in the user's own repo/GitHub.
-    private enum ConfirmingRun: Identifiable {
-        case all(count: Int)
-        case one(DevSpec)
-
-        var id: String {
-            switch self {
-            case .all: return "all"
-            case .one(let spec): return spec.id.uuidString
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    header
+                    summarySection
+                    if !meeting.actionItems.isEmpty { actionsSection }
+                    transcriptSection
+                }
+                .padding(24)
+                .frame(maxWidth: 720, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .background(.background)
+            .navigationDestination(isPresented: $showingSpecs) {
+                DevSpecsView(meeting: meeting)
+            }
+            .toolbar { toolbarContent }
+            .deleteMeetingConfirmation(isPresented: $confirmDelete, title: meeting.title) {
+                do {
+                    try appState.store.delete(meeting)
+                    onDelete()
+                } catch {
+                    appState.errorMessage = "Não foi possível excluir a reunião: \(error.localizedDescription)"
+                }
             }
         }
     }
 
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                header
-                summarySection
-                if !meeting.actionItems.isEmpty { actionsSection }
-                devSpecsSection
-                transcriptSection
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem {
+            Button("Continuar transcrição", systemImage: "mic.badge.plus") {
+                Task { await appState.continueMeeting(meeting) }
             }
-            .padding(24)
-            .frame(maxWidth: 720, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .disabled(appState.mode == .meeting)
         }
-        .background(.background)
-        .onAppear {
-            if repoPath == nil {
-                repoPath = meeting.devSpecsOrEmpty.compactMap(\.repoPath).first ?? appState.settings.lastUsedRepoPath
+        ToolbarItem {
+            Button("Specs de implementação", systemImage: "hammer") {
+                showingSpecs = true
             }
         }
-        .alert(
-            confirmingRunTitle,
-            isPresented: Binding(get: { confirmingRun != nil }, set: { if !$0 { confirmingRun = nil } }),
-            presenting: confirmingRun
-        ) { run in
-            Button("Rodar") { confirm(run) }
-            Button("Cancelar", role: .cancel) {}
-        } message: { run in
-            Text(confirmMessage(for: run))
-        }
-        .toolbar {
-            ToolbarItem {
-                Button("Continuar transcrição", systemImage: "mic.badge.plus") {
-                    Task { await appState.continueMeeting(meeting) }
-                }
-                .disabled(appState.mode == .meeting)
-            }
-            ToolbarItem {
-                Menu {
-                    Button("Copiar como Markdown") { MeetingExporter.copyToPasteboard(MeetingExporter.markdown(meeting)) }
-                    Button("Copiar como texto") { MeetingExporter.copyToPasteboard(MeetingExporter.plainText(meeting)) }
-                    Divider()
-                    Button("Exportar…") { MeetingExporter.exportToFile(meeting) }
-                } label: {
-                    Label("Compartilhar", systemImage: "square.and.arrow.up")
-                }
-            }
-            ToolbarItem {
-                Button("Salvar", systemImage: "checkmark") {
-                    save()
-                }
-                .keyboardShortcut("s", modifiers: .command)
-            }
-            ToolbarItem {
-                Button("Excluir", systemImage: "trash", role: .destructive) {
-                    confirmDelete = true
-                }
+        ToolbarItem {
+            Menu {
+                Button("Copiar como Markdown") { MeetingExporter.copyToPasteboard(MeetingExporter.markdown(meeting)) }
+                Button("Copiar como texto") { MeetingExporter.copyToPasteboard(MeetingExporter.plainText(meeting)) }
+                Divider()
+                Button("Exportar…") { MeetingExporter.exportToFile(meeting) }
+            } label: {
+                Label("Compartilhar", systemImage: "square.and.arrow.up")
             }
         }
-        .deleteMeetingConfirmation(isPresented: $confirmDelete, title: meeting.title) {
-            do {
-                try appState.store.delete(meeting)
-                onDelete()
-            } catch {
-                appState.errorMessage = "Não foi possível excluir a reunião: \(error.localizedDescription)"
+        ToolbarItem {
+            Button("Salvar", systemImage: "checkmark") {
+                save()
+            }
+            .keyboardShortcut("s", modifiers: .command)
+        }
+        ToolbarItem {
+            Button("Excluir", systemImage: "trash", role: .destructive) {
+                confirmDelete = true
             }
         }
     }
@@ -298,190 +273,6 @@ struct MeetingDetailView: View {
                     .buttonStyle(.plain)
                 }
             }
-        }
-    }
-
-    // MARK: - Dev specs
-
-    private var devSpecsSection: some View {
-        section("Specs de implementação", systemImage: "hammer", isExpanded: $specsExpanded) {
-            Button {
-                Task { await generateSpecs() }
-            } label: {
-                if generatingSpecs {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Label("Gerar specs", systemImage: "wand.and.stars")
-                }
-            }
-            .buttonStyle(.borderless)
-            .controlSize(.small)
-            .labelStyle(.iconOnly)
-            .disabled(generatingSpecs || meeting.fullTranscriptText.isEmpty)
-            .help("Gerar specs de implementação a partir da transcrição")
-        } content: {
-            VStack(alignment: .leading, spacing: 12) {
-                if let specsError {
-                    Label(specsError, systemImage: "exclamationmark.triangle.fill")
-                        .font(.callout)
-                        .foregroundStyle(.red)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                repoRow
-                if meeting.devSpecsOrEmpty.isEmpty {
-                    Text("Nenhuma spec gerada ainda.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    HStack {
-                        Spacer()
-                        Button("Rodar tudo", systemImage: "play.fill") {
-                            confirmingRun = .all(count: meeting.devSpecsOrEmpty.count)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(repoPath == nil)
-                    }
-                    ForEach(meeting.devSpecsOrEmpty) { spec in
-                        devSpecCard(spec)
-                    }
-                }
-            }
-        }
-    }
-
-    /// One repo path shared by every spec in this meeting — pick it once here instead of per card.
-    private var repoRow: some View {
-        HStack {
-            Text(repoPath ?? "Nenhum repositório escolhido")
-                .font(.callout)
-                .foregroundStyle(repoPath == nil ? .secondary : .primary)
-                .lineLimit(1)
-                .truncationMode(.head)
-            Spacer()
-            Button("Escolher repositório…") { chooseRepo() }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-        }
-    }
-
-    private func devSpecCard(_ spec: DevSpec) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(spec.title).font(.headline)
-            Text(spec.description)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack {
-                if recentlyOpenedSpecID == spec.id {
-                    Label("Aberto no Terminal", systemImage: "checkmark.circle.fill")
-                        .font(.callout)
-                        .foregroundStyle(.green)
-                        .transition(.opacity)
-                }
-                Spacer()
-                Button("Abrir no Claude Code", systemImage: "terminal") {
-                    confirmingRun = .one(spec)
-                }
-                .buttonStyle(.bordered)
-                .disabled(repoPath == nil || openingSpecID == spec.id)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
-    }
-
-    private func chooseRepo() {
-        NSApp.activate(ignoringOtherApps: true)
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.prompt = "Escolher"
-        if let current = repoPath ?? appState.settings.lastUsedRepoPath {
-            panel.directoryURL = URL(fileURLWithPath: current)
-        }
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        repoPath = url.path
-        appState.settings.lastUsedRepoPath = url.path
-        for spec in meeting.devSpecsOrEmpty {
-            var updated = spec
-            updated.repoPath = url.path
-            meeting.updateDevSpec(updated)
-        }
-        save()
-    }
-
-    private var confirmingRunTitle: String {
-        switch confirmingRun {
-        case .all(let count): return count == 1 ? "Rodar automação?" : "Rodar \(count) automações?"
-        case .one, .none: return "Rodar automação?"
-        }
-    }
-
-    private func confirmMessage(for run: ConfirmingRun) -> String {
-        let repo = repoPath ?? ""
-        let windows: String
-        switch run {
-        case .all(let count): windows = count == 1 ? "um Terminal" : "\(count) Terminais"
-        case .one: windows = "um Terminal"
-        }
-        return "Isso vai abrir \(windows) e deixar o Claude Code implementar, commitar, dar push e abrir Pull Request sozinho em \u{201c}\(repo)\u{201d}."
-    }
-
-    private func confirm(_ run: ConfirmingRun) {
-        switch run {
-        case .all:
-            runAll()
-        case .one(let spec):
-            Task { await openInTerminal(spec) }
-        }
-    }
-
-    /// Opens a Terminal window for every spec against the shared repo, one after another.
-    private func runAll() {
-        Task {
-            for spec in meeting.devSpecsOrEmpty {
-                await openInTerminal(spec)
-            }
-        }
-    }
-
-    private func openInTerminal(_ spec: DevSpec) async {
-        guard let repoPath else { return }
-        openingSpecID = spec.id
-        specsError = nil
-        defer { openingSpecID = nil }
-        do {
-            try await appState.openDevSpecInTerminal(spec, in: meeting, repoPath: repoPath)
-            withAnimation(.smooth) { recentlyOpenedSpecID = spec.id }
-            Task {
-                try? await Task.sleep(for: .seconds(2))
-                if recentlyOpenedSpecID == spec.id {
-                    withAnimation(.smooth) { recentlyOpenedSpecID = nil }
-                }
-            }
-        } catch {
-            specsError = error.localizedDescription
-        }
-    }
-
-    private func generateSpecs() async {
-        generatingSpecs = true
-        specsError = nil
-        defer { generatingSpecs = false }
-        do {
-            var updated = try await appState.generateDevSpecs(for: meeting)
-            if let repoPath {
-                for spec in updated.devSpecsOrEmpty {
-                    var withRepo = spec
-                    withRepo.repoPath = repoPath
-                    updated.updateDevSpec(withRepo)
-                }
-            }
-            withAnimation(.smooth) { meeting = updated }
-            save()
-        } catch {
-            specsError = error.localizedDescription
         }
     }
 
