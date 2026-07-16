@@ -81,11 +81,18 @@ struct DevSpecsView: View {
             Label("Specs de implementação", systemImage: "hammer").font(.headline)
 
             Group {
-                Picker("Modelo", selection: $options.model) {
-                    ForEach(ClaudeModel.allCases) { Text($0.label).tag($0) }
+                Picker("Gerar com", selection: $options.provider) {
+                    ForEach(SpecProvider.allCases) { Text($0.label).tag($0) }
                 }
-                Picker("Esforço", selection: $options.effort) {
-                    ForEach(ClaudeEffort.allCases) { Text($0.label).tag($0) }
+                .pickerStyle(.segmented)
+
+                if options.provider == .claude {
+                    Picker("Modelo", selection: $options.model) {
+                        ForEach(ClaudeModel.allCases) { Text($0.label).tag($0) }
+                    }
+                    Picker("Esforço", selection: $options.effort) {
+                        ForEach(ClaudeEffort.allCases) { Text($0.label).tag($0) }
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 6) {

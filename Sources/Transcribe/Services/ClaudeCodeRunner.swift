@@ -19,6 +19,8 @@ enum ClaudeCodeRunner {
     enum RunnerError: LocalizedError {
         case repoNotFound
         case repoDirty
+        case toolNotFound(String)
+        case invalidGeneration(String)
 
         var errorDescription: String? {
             switch self {
@@ -26,7 +28,65 @@ enum ClaudeCodeRunner {
                 return "A pasta escolhida não existe mais ou não é um repositório git válido."
             case .repoDirty:
                 return "O repositório tem alterações não commitadas. Faça commit ou stash antes de rodar a automação."
+            case .toolNotFound(let tool):
+                return "Não encontrei o `\(tool)` no PATH deste Mac. Confirme que está instalado e autenticado, e tente de novo."
+            case .invalidGeneration(let text):
+                return "O Claude não devolveu uma lista de specs válida. Resposta recebida: \(text.prefix(200))"
             }
+        }
+    }
+
+    /// Generates the spec list by having the real `claude` CLI read the transcript directly —
+    /// no context-window juggling needed, and much more accurate than the on-device model. Runs
+    /// headless with no tool access at all (pure text-in/JSON-out), so nothing pops up on screen.
+    static func generateDevSpecs(transcript: String, calendarContext: String?, customInstructions: String, options: DevSpecOptions) async throws -> [DevSpec] {
+        guard let claude = await resolveTool("claude") else { throw RunnerError.toolNotFound("claude") }
+
+        var lines = [
+            "Leia a transcrição de reunião de trabalho em português do Brasil enviada via stdin e identifique",
+            "tarefas de implementação de software distintas mencionadas nela, sem inventar informação que não",
+            "está no texto. Devolva SOMENTE um JSON no formato [{\"title\": \"...\", \"description\": \"...\"}] —",
+            "nenhum texto antes ou depois, nenhum bloco de código markdown. Se nada for acionável, devolva [].",
+        ]
+        let custom = customInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !custom.isEmpty { lines.append("Instruções adicionais do usuário: \(custom)") }
+        if let calendarContext, !calendarContext.isEmpty { lines.append("Contexto do evento de calendário: \(calendarContext)") }
+        let prompt = lines.joined(separator: " ")
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: claude)
+        process.arguments = ["-p", prompt, "--model", options.model.rawValue, "--effort", options.effort.rawValue]
+
+        let stdin = Pipe()
+        let stdout = Pipe()
+        process.standardInput = stdin
+        process.standardOutput = stdout
+        process.standardError = FileHandle.nullDevice
+
+        try process.run()
+        if let data = transcript.data(using: .utf8) { stdin.fileHandleForWriting.write(data) }
+        try stdin.fileHandleForWriting.close()
+        let data = stdout.fileHandleForReading.readDataToEndOfFile()
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            process.terminationHandler = { _ in continuation.resume() }
+        }
+
+        return try parseDevSpecs(from: String(data: data, encoding: .utf8) ?? "")
+    }
+
+    static func parseDevSpecs(from text: String) throws -> [DevSpec] {
+        let cleaned = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let data = cleaned.data(using: .utf8),
+              let raw = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            throw RunnerError.invalidGeneration(cleaned)
+        }
+        return raw.compactMap { obj in
+            guard let title = obj["title"] as? String, let description = obj["description"] as? String else { return nil }
+            return DevSpec(title: title, description: description)
         }
     }
 
@@ -49,7 +109,7 @@ enum ClaudeCodeRunner {
     /// yet. Never throws — worst case it just reports `.dispatched` (sent, nothing found yet).
     static func checkStatus(spec: DevSpec, repoPath: String) async -> DevSpecStatus {
         guard spec.lastDispatchedAt != nil else { return .notStarted }
-        guard let gh = await resolveGH() else { return .dispatched }
+        guard let gh = await resolveTool("gh") else { return .dispatched }
         let branch = branchName(for: spec)
         guard let (out, rc) = try? await runProcess(gh, ["-C", repoPath, "pr", "view", branch, "--json", "url,state", "-q", ".url + \"|\" + .state"]),
               rc == 0 else { return .dispatched }
@@ -63,10 +123,10 @@ enum ClaudeCodeRunner {
         }
     }
 
-    /// `gh` (unlike `git`) isn't at a fixed system path — resolve it via a login shell, same reason
-    /// the old headless runner had to: this app process doesn't inherit the user's shell PATH.
-    private static func resolveGH() async -> String? {
-        guard let (out, rc) = try? await runProcess("/bin/zsh", ["-l", "-c", "command -v gh"]), rc == 0 else { return nil }
+    /// `gh`/`claude` (unlike `git`) aren't at a fixed system path — resolve via a login shell: this
+    /// app process doesn't inherit the user's shell PATH the way Terminal-launched scripts do.
+    private static func resolveTool(_ name: String) async -> String? {
+        guard let (out, rc) = try? await runProcess("/bin/zsh", ["-l", "-c", "command -v \(name)"]), rc == 0 else { return nil }
         let path = out.trimmingCharacters(in: .whitespacesAndNewlines)
         return path.isEmpty ? nil : path
     }

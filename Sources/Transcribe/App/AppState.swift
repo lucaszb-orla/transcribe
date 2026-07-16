@@ -226,11 +226,24 @@ final class AppState {
 
     /// Splits a saved meeting into candidate dev specs and persists them. Returns the updated meeting.
     func generateDevSpecs(for meeting: Meeting, options: DevSpecOptions) async throws -> Meeting {
-        let specs = try await Summarizer.generateDevSpecs(
-            transcript: meeting.fullTranscriptText,
-            calendarContext: Self.calendarContext(for: meeting),
-            customInstructions: options.customInstructions
-        )
+        let transcript = meeting.fullTranscriptText
+        let calendarContext = Self.calendarContext(for: meeting)
+        let specs: [DevSpec]
+        switch options.provider {
+        case .appleIntelligence:
+            specs = try await Summarizer.generateDevSpecs(
+                transcript: transcript,
+                calendarContext: calendarContext,
+                customInstructions: options.customInstructions
+            )
+        case .claude:
+            specs = try await ClaudeCodeRunner.generateDevSpecs(
+                transcript: transcript,
+                calendarContext: calendarContext,
+                customInstructions: options.customInstructions,
+                options: options
+            )
+        }
         var updated = meeting
         updated.devSpecs = specs
         try store.save(updated)

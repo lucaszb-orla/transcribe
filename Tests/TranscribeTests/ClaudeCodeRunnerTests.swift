@@ -40,4 +40,24 @@ final class ClaudeCodeRunnerTests: XCTestCase {
         let scriptB = ClaudeCodeRunner.buildScript(spec: specB, branch: "x", meetingMarkdown: "", repoPath: "/tmp/r", options: options)
         XCTAssertNotEqual(scriptA, scriptB)
     }
+
+    func testParseDevSpecsDecodesPlainJSON() throws {
+        let specs = try ClaudeCodeRunner.parseDevSpecs(from: #"[{"title":"A","description":"B"}]"#)
+        XCTAssertEqual(specs.map(\.title), ["A"])
+        XCTAssertEqual(specs.map(\.description), ["B"])
+    }
+
+    func testParseDevSpecsStripsMarkdownCodeFence() throws {
+        let text = "```json\n[{\"title\":\"A\",\"description\":\"B\"}]\n```"
+        let specs = try ClaudeCodeRunner.parseDevSpecs(from: text)
+        XCTAssertEqual(specs.map(\.title), ["A"])
+    }
+
+    func testParseDevSpecsReturnsEmptyForEmptyArray() throws {
+        XCTAssertEqual(try ClaudeCodeRunner.parseDevSpecs(from: "[]"), [])
+    }
+
+    func testParseDevSpecsThrowsOnGarbage() {
+        XCTAssertThrowsError(try ClaudeCodeRunner.parseDevSpecs(from: "desculpe, não consigo ajudar com isso"))
+    }
 }
