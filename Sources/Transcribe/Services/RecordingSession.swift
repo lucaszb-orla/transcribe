@@ -47,7 +47,7 @@ final class RecordingSession {
     }
 
     var liveSegments: [TranscriptSegment] {
-        (micTranscriber.segments + systemTranscriber.segments).sorted { $0.start < $1.start }
+        deduped(mic: micTranscriber.segments, systemAudio: systemTranscriber.segments)
     }
 
     /// The in-progress phrase for each source, not yet finalized — used to show a "still speaking" bubble.
@@ -114,9 +114,47 @@ final class RecordingSession {
         micLevel = 0
         async let micSegments = micTranscriber.finish()
         async let systemSegments = systemTranscriber.finish()
-        let segments = await (micSegments + systemSegments).sorted { $0.start < $1.start }
+        let segments = await deduped(mic: micSegments, systemAudio: systemSegments)
         state = .idle
         return (segments, startedAt ?? Date(), Date())
+    }
+
+    /// Without headphones, the mic often picks up the Mac's own speaker output (the other
+    /// participants' audio), so the same utterance gets transcribed twice: correctly under
+    /// "Participantes" (system audio) and again, muffled, mistagged "Você" (mic). System audio
+    /// is the ground truth for what others said, so any mic segment that's a near-duplicate —
+    /// close in time and similar in text — of a system-audio segment gets dropped.
+    // ponytail: naive O(n*m) scan + word-overlap heuristic, good enough for a meeting-length
+    // transcript; revisit with better matching if leakage still slips through in practice.
+    private func deduped(mic: [TranscriptSegment], systemAudio: [TranscriptSegment]) -> [TranscriptSegment] {
+        let timeWindow: TimeInterval = 3
+        let similarityThreshold = 0.5
+        let keptMic = mic.filter { micSegment in
+            !systemAudio.contains { systemSegment in
+                abs(systemSegment.start - micSegment.start) <= timeWindow
+                    && micSegment.text.echoSimilarity(to: systemSegment.text) >= similarityThreshold
+            }
+        }
+        return (keptMic + systemAudio).sorted { $0.start < $1.start }
+    }
+}
+
+private extension String {
+    /// Jaccard similarity (0…1) of normalized word sets — a cheap stand-in for "are these
+    /// the same utterance", tolerant of the mic's leaked copy being a bit noisier/lower-quality.
+    func echoSimilarity(to other: String) -> Double {
+        let a = normalizedWordSet
+        let b = other.normalizedWordSet
+        guard !a.isEmpty, !b.isEmpty else { return 0 }
+        let intersection = a.intersection(b).count
+        guard intersection > 0 else { return 0 }
+        return Double(intersection) / Double(a.union(b).count)
+    }
+
+    private var normalizedWordSet: Set<String> {
+        Set(lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty })
     }
 }
 
