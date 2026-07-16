@@ -9,6 +9,17 @@ enum AppMode {
     case meeting
 }
 
+/// Live state for one in-flight "enviar pro Claude Code" run. Ephemeral — only lives while the app
+/// is open; the final `DevSpecResult` is what gets persisted onto the `Meeting`.
+@MainActor
+@Observable
+final class DevSpecRunState {
+    var log: String = ""
+    var isRunning = true
+    var result: DevSpecResult?
+    var errorMessage: String?
+}
+
 /// The app's top-level state machine: Standby (watching the calendar) ↔ Meeting (recording).
 @MainActor
 @Observable
@@ -40,6 +51,9 @@ final class AppState {
     var recordingStartedAt: Date?
     /// Set when a recording just ended, so the list can jump to it for summary review.
     var pendingReviewMeetingID: UUID?
+
+    /// In-flight "enviar pro Claude Code" runs, keyed by `DevSpec.id`.
+    var devSpecRuns: [UUID: DevSpecRunState] = [:]
 
     init() {
         Task { await self.start() }
@@ -222,6 +236,60 @@ final class AppState {
         updated.actionItems = result.actionItems
         try store.save(updated)
         return updated
+    }
+
+    /// Splits a saved meeting into candidate dev specs and persists them. Returns the updated meeting.
+    func generateDevSpecs(for meeting: Meeting) async throws -> Meeting {
+        let specs = try await Summarizer.generateDevSpecs(
+            transcript: meeting.fullTranscriptText,
+            calendarContext: Self.calendarContext(for: meeting)
+        )
+        var updated = meeting
+        updated.devSpecs = specs
+        try store.save(updated)
+        return updated
+    }
+
+    /// Kicks off the Claude Code automation for one spec inside `repoPath`, streaming progress into
+    /// `devSpecRuns[spec.id]` and persisting the final `DevSpecResult` onto the meeting.
+    func runDevSpec(_ spec: DevSpec, in meeting: Meeting, repoPath: String) {
+        let state = DevSpecRunState()
+        devSpecRuns[spec.id] = state
+        settings.lastUsedRepoPath = repoPath
+
+        var spec = spec
+        spec.repoPath = repoPath
+        let meetingMarkdown = MeetingExporter.markdown(meeting)
+
+        Task {
+            do {
+                let result = try await ClaudeCodeRunner.run(
+                    spec: spec,
+                    meetingMarkdown: meetingMarkdown,
+                    repoPath: repoPath
+                ) { [weak state] line in
+                    state?.log += (state?.log.isEmpty == false ? "\n" : "") + line
+                }
+                state.result = result
+                state.isRunning = false
+                persist(spec: spec, result: result, in: meeting.id)
+            } catch {
+                state.errorMessage = error.localizedDescription
+                state.isRunning = false
+            }
+        }
+    }
+
+    private func persist(spec: DevSpec, result: DevSpecResult, in meetingID: UUID) {
+        guard var meeting = store.meetings.first(where: { $0.id == meetingID }) else { return }
+        var updatedSpec = spec
+        updatedSpec.result = result
+        meeting.updateDevSpec(updatedSpec)
+        do {
+            try store.save(meeting)
+        } catch {
+            logger.error("failed to persist dev spec result: \(String(describing: error), privacy: .public)")
+        }
     }
 
     private static func calendarContext(for meeting: Meeting) -> String? {

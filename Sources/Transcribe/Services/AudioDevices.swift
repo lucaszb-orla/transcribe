@@ -109,11 +109,17 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(autoExportFolderPath, forKey: Self.autoExportFolderKey) }
     }
 
+    /// Last git repo path picked for the "enviar pro Claude Code" automation; nil until first use.
+    var lastUsedRepoPath: String? {
+        didSet { UserDefaults.standard.set(lastUsedRepoPath, forKey: Self.lastUsedRepoPathKey) }
+    }
+
     private static let inputKey = "selectedInputUID"
     private static let localeKey = "transcriptionLocaleID"
     private static let autoRecordKey = "autoRecordFromCalendar"
     private static let autoExportEnabledKey = "autoExportEnabled"
     private static let autoExportFolderKey = "autoExportFolderPath"
+    private static let lastUsedRepoPathKey = "lastUsedRepoPath"
 
     init() {
         selectedInputUID = UserDefaults.standard.string(forKey: Self.inputKey)
@@ -122,6 +128,7 @@ final class AppSettings {
         autoRecordFromCalendar = UserDefaults.standard.bool(forKey: Self.autoRecordKey)
         autoExportEnabled = UserDefaults.standard.bool(forKey: Self.autoExportEnabledKey)
         autoExportFolderPath = UserDefaults.standard.string(forKey: Self.autoExportFolderKey)
+        lastUsedRepoPath = UserDefaults.standard.string(forKey: Self.lastUsedRepoPathKey)
     }
 
     var autoExportFolderURL: URL? {

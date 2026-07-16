@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct MeetingDetailView: View {
@@ -22,12 +23,20 @@ struct MeetingDetailView: View {
     @State private var transcriptExpanded = false
     @State private var editingTranscript = false
 
+    @State private var specsExpanded = true
+    @State private var generatingSpecs = false
+    @State private var specsError: String?
+    @State private var activeRun: ActiveRun?
+
+    private struct ActiveRun: Identifiable { let id: UUID }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 header
                 summarySection
                 if !meeting.actionItems.isEmpty { actionsSection }
+                devSpecsSection
                 transcriptSection
             }
             .padding(24)
@@ -35,6 +44,9 @@ struct MeetingDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(.background)
+        .sheet(item: $activeRun) { run in
+            devSpecRunSheet(specID: run.id)
+        }
         .toolbar {
             ToolbarItem {
                 Button("Continuar transcrição", systemImage: "mic.badge.plus") {
@@ -257,6 +269,164 @@ struct MeetingDetailView: View {
                     .buttonStyle(.plain)
                 }
             }
+        }
+    }
+
+    // MARK: - Dev specs
+
+    private var devSpecsSection: some View {
+        section("Specs de implementação", systemImage: "hammer", isExpanded: $specsExpanded) {
+            Button {
+                Task { await generateSpecs() }
+            } label: {
+                if generatingSpecs {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Label("Gerar specs", systemImage: "sparkles")
+                }
+            }
+            .buttonStyle(.borderless)
+            .controlSize(.small)
+            .labelStyle(.iconOnly)
+            .disabled(generatingSpecs || meeting.fullTranscriptText.isEmpty)
+            .help("Gerar specs de implementação a partir da transcrição")
+        } content: {
+            VStack(alignment: .leading, spacing: 12) {
+                if let specsError {
+                    Label(specsError, systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if meeting.devSpecsOrEmpty.isEmpty {
+                    Text("Nenhuma spec gerada ainda.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(meeting.devSpecsOrEmpty) { spec in
+                        devSpecCard(spec)
+                    }
+                }
+            }
+        }
+    }
+
+    private func devSpecCard(_ spec: DevSpec) -> some View {
+        let running = appState.devSpecRuns[spec.id]?.isRunning == true
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(spec.title).font(.headline)
+            Text(spec.description)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack {
+                Text(spec.repoPath ?? "Nenhum repositório escolhido")
+                    .font(.callout)
+                    .foregroundStyle(spec.repoPath == nil ? .secondary : .primary)
+                    .lineLimit(1)
+                    .truncationMode(.head)
+                Spacer()
+                Button("Escolher…") { chooseRepo(for: spec.id) }
+                    .buttonStyle(.borderless)
+                    .controlSize(.small)
+            }
+
+            HStack {
+                if let result = spec.result, !running {
+                    if result.status == .success, let urlString = result.prURL, let url = URL(string: urlString) {
+                        Button("Abrir PR", systemImage: "arrow.up.right.square") {
+                            NSWorkspace.shared.open(url)
+                        }
+                        .buttonStyle(.link)
+                    } else {
+                        Label(result.message, systemImage: "exclamationmark.triangle.fill")
+                            .font(.callout)
+                            .foregroundStyle(.red)
+                    }
+                }
+                Spacer()
+                Button("Rodar", systemImage: "play.fill") {
+                    guard let repoPath = spec.repoPath else { return }
+                    appState.runDevSpec(spec, in: meeting, repoPath: repoPath)
+                    activeRun = ActiveRun(id: spec.id)
+                }
+                .buttonStyle(.bordered)
+                .disabled(spec.repoPath == nil || running)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    @ViewBuilder
+    private func devSpecRunSheet(specID: UUID) -> some View {
+        if let state = appState.devSpecRuns[specID] {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Rodando automação").font(.headline)
+
+                ScrollView {
+                    Text(state.log.isEmpty ? "Aguardando…" : state.log)
+                        .font(.system(.callout, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(minWidth: 480, minHeight: 320)
+                .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
+
+                if state.isRunning {
+                    ProgressView().controlSize(.small)
+                } else if let result = state.result {
+                    if result.status == .success, let urlString = result.prURL, let url = URL(string: urlString) {
+                        Button("Abrir PR", systemImage: "arrow.up.right.square") {
+                            NSWorkspace.shared.open(url)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    } else {
+                        Label(result.message, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else if let errorMessage = state.errorMessage {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                HStack {
+                    Spacer()
+                    Button("Fechar") { activeRun = nil }
+                }
+            }
+            .padding(20)
+        }
+    }
+
+    private func chooseRepo(for specID: UUID) {
+        NSApp.activate(ignoringOtherApps: true)
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Escolher"
+        if let last = appState.settings.lastUsedRepoPath {
+            panel.directoryURL = URL(fileURLWithPath: last)
+        }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard var spec = meeting.devSpecsOrEmpty.first(where: { $0.id == specID }) else { return }
+        spec.repoPath = url.path
+        meeting.updateDevSpec(spec)
+        save()
+    }
+
+    private func generateSpecs() async {
+        generatingSpecs = true
+        specsError = nil
+        defer { generatingSpecs = false }
+        do {
+            let updated = try await appState.generateDevSpecs(for: meeting)
+            withAnimation(.smooth) { meeting = updated }
+        } catch {
+            specsError = error.localizedDescription
         }
     }
 
