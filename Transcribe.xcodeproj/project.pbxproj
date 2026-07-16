@@ -33,6 +33,7 @@
 		DCA4464EF68A847A6F2815F7 /* CalendarMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02BAFC10225EA2EAFADC5905 /* CalendarMonitor.swift */; };
 		DD405BDFD63B533C843F2374 /* RecordingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BA07D1F2C3BF99DE5139873 /* RecordingSession.swift */; };
 		E725174DE2E37527D772E68C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D26FFC1863524AFAC3F4C04B /* Assets.xcassets */; };
+		F1739070C90111900A73D835 /* TranscriptBubbles.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADBC8B16BA9DD5690D2A0A92 /* TranscriptBubbles.swift */; };
 		FB5E38D67E0A9AC3456B2ADB /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64DCF3BF5A013561B1842837 /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
@@ -69,6 +70,7 @@
 		A0D69A1935811A656C177589 /* SummaryPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryPresets.swift; sourceTree = "<group>"; };
 		A685F7F5BA510E51768863C4 /* MeetingListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingListView.swift; sourceTree = "<group>"; };
 		AB2A51506BBE8BC72261072A /* MeetingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingDetailView.swift; sourceTree = "<group>"; };
+		ADBC8B16BA9DD5690D2A0A92 /* TranscriptBubbles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptBubbles.swift; sourceTree = "<group>"; };
 		B8646A7D11647B6100B6EE01 /* CallLinkDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallLinkDetector.swift; sourceTree = "<group>"; };
 		BD738AD36CCD64B8522BDEA5 /* CallLinkDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallLinkDetectorTests.swift; sourceTree = "<group>"; };
 		C2CBCFF03C743AD3FEAF7CEC /* ConfirmationDialogs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmationDialogs.swift; sourceTree = "<group>"; };
@@ -178,6 +180,7 @@
 				572FEF7D43BC0B9826A6BA43 /* RecordingView.swift */,
 				CB3AB0AF6C1BBF70B2ABE160 /* RootView.swift */,
 				5812FF85E2A118A4CD275DA2 /* SettingsView.swift */,
+				ADBC8B16BA9DD5690D2A0A92 /* TranscriptBubbles.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -315,6 +318,7 @@
 				43ED93A76A107CB3610BA687 /* SystemAudioCapture.swift in Sources */,
 				661BD9294BA1AF00E2F45C3C /* TranscribeApp.swift in Sources */,
 				18969BE10AB3A8FD314F7E9E /* Transcriber.swift in Sources */,
+				F1739070C90111900A73D835 /* TranscriptBubbles.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

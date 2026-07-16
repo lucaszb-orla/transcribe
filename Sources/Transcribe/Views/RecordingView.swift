@@ -81,13 +81,16 @@ struct RecordingView: View {
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
-                    Text(appState.liveText)
-                        .font(.body)
-                        .frame(maxWidth: 640, alignment: .leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                        .padding()
-                        .id("live")
+                    TranscriptBubbleList(
+                        segments: appState.liveTranscript,
+                        pendingMe: appState.livePendingMe,
+                        pendingOthers: appState.livePendingOthers
+                    )
+                    .font(.body)
+                    .frame(maxWidth: 640, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .id("live")
                 }
                 .onChange(of: appState.liveText) {
                     withAnimation { proxy.scrollTo("live", anchor: .bottom) }

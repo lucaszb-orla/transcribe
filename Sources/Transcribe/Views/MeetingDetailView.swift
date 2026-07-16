@@ -20,6 +20,7 @@ struct MeetingDetailView: View {
     @State private var summaryExpanded = true
     @State private var actionsExpanded = true
     @State private var transcriptExpanded = false
+    @State private var editingTranscript = false
 
     var body: some View {
         ScrollView {
@@ -263,14 +264,27 @@ struct MeetingDetailView: View {
 
     private var transcriptSection: some View {
         section("Transcrição", systemImage: "text.quote", isExpanded: $transcriptExpanded) {
-            EmptyView()
+            Button(editingTranscript ? "Concluir" : "Editar", systemImage: editingTranscript ? "checkmark" : "pencil") {
+                withAnimation(.smooth) { editingTranscript.toggle() }
+            }
+            .buttonStyle(.borderless)
+            .controlSize(.small)
+            .labelStyle(.iconOnly)
+            .help(editingTranscript ? "Concluir edição" : "Editar transcrição")
         } content: {
-            TextEditor(text: $meeting.editableTranscriptText)
-                .font(.body)
-                .scrollContentBackground(.hidden)
-                .frame(minHeight: 260)
-                .padding(10)
-                .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+            if editingTranscript {
+                TextEditor(text: $meeting.editableTranscriptText)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 260)
+                    .padding(10)
+                    .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+            } else if meeting.transcript.isEmpty {
+                Text("Transcrição vazia.")
+                    .foregroundStyle(.secondary)
+            } else {
+                TranscriptBubbleList(segments: meeting.transcript)
+            }
         }
     }
 

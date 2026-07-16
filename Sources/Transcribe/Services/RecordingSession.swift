@@ -50,6 +50,10 @@ final class RecordingSession {
         (micTranscriber.segments + systemTranscriber.segments).sorted { $0.start < $1.start }
     }
 
+    /// The in-progress phrase for each source, not yet finalized — used to show a "still speaking" bubble.
+    var micVolatileText: String { micTranscriber.volatileText }
+    var systemVolatileText: String { systemTranscriber.volatileText }
+
     func start(inputDeviceID: AudioDeviceID?, locale: Locale) async throws {
         guard state == .idle else { return }
         startedAt = Date()

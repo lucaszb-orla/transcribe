@@ -33,6 +33,8 @@ final class AppState {
     var suggestion: MeetingSuggestion? { calendarMonitor.suggestion }
     var liveTranscript: [TranscriptSegment] { recordingSession?.liveSegments ?? [] }
     var liveText: String { recordingSession?.liveText ?? "" }
+    var livePendingMe: String { recordingSession?.micVolatileText ?? "" }
+    var livePendingOthers: String { recordingSession?.systemVolatileText ?? "" }
     var isPaused: Bool { recordingSession?.state == .paused }
     var micLevel: Float { recordingSession?.micLevel ?? 0 }
     var recordingStartedAt: Date?
