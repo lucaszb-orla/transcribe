@@ -50,6 +50,12 @@ struct DevSpecsView: View {
         }
         .background(.background)
         .navigationTitle("Specs de implementação")
+        .toolbar {
+            ToolbarItem {
+                Button("Salvar", systemImage: "checkmark") { save() }
+                    .keyboardShortcut("s", modifiers: .command)
+            }
+        }
         .onAppear {
             if repoPath == nil {
                 repoPath = meeting.devSpecsOrEmpty.compactMap(\.repoPath).first ?? appState.settings.lastUsedRepoPath
