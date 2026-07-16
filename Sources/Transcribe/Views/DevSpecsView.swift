@@ -162,9 +162,21 @@ struct DevSpecsView: View {
 
     private func devSpecCard(_ spec: DevSpec) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            TextField("Título", text: titleBinding(spec.id))
-                .textFieldStyle(.plain)
-                .font(.headline)
+            HStack(alignment: .firstTextBaseline) {
+                TextField("Título", text: titleBinding(spec.id))
+                    .textFieldStyle(.plain)
+                    .font(.headline)
+                Spacer()
+                Button {
+                    meeting.removeDevSpec(spec.id)
+                    save()
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .help("Remover spec")
+            }
             TextField("Descrição", text: descriptionBinding(spec.id), axis: .vertical)
                 .textFieldStyle(.plain)
                 .foregroundStyle(.secondary)

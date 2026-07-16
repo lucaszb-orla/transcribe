@@ -69,6 +69,10 @@ struct Meeting: Codable, Identifiable, Hashable {
         devSpecs = specs
     }
 
+    mutating func removeDevSpec(_ id: UUID) {
+        devSpecs?.removeAll { $0.id == id }
+    }
+
     var fullTranscriptText: String {
         transcript.map { segment in
             guard let speaker = segment.speaker else { return segment.text }
