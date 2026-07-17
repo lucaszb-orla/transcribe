@@ -36,6 +36,9 @@ struct Meeting: Codable, Identifiable, Hashable {
     /// Texts of the action items the user has ticked off. Optional so older saved meetings decode.
     /// ponytail: keyed by text (action items aren't editable), so duplicate texts toggle together.
     var doneActionItems: [String]? = nil
+    /// Implementation tasks extracted from this meeting, each optionally sent to Claude Code.
+    /// Optional so older saved meetings decode.
+    var devSpecs: [DevSpec]? = nil
 
     /// True once a summary has been generated (either format).
     var hasSummary: Bool {
@@ -50,6 +53,24 @@ struct Meeting: Codable, Identifiable, Hashable {
         var done = doneActionItems ?? []
         if let i = done.firstIndex(of: item) { done.remove(at: i) } else { done.append(item) }
         doneActionItems = done
+    }
+
+    var devSpecsOrEmpty: [DevSpec] {
+        devSpecs ?? []
+    }
+
+    mutating func updateDevSpec(_ spec: DevSpec) {
+        var specs = devSpecsOrEmpty
+        if let i = specs.firstIndex(where: { $0.id == spec.id }) {
+            specs[i] = spec
+        } else {
+            specs.append(spec)
+        }
+        devSpecs = specs
+    }
+
+    mutating func removeDevSpec(_ id: UUID) {
+        devSpecs?.removeAll { $0.id == id }
     }
 
     var fullTranscriptText: String {

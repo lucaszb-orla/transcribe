@@ -45,3 +45,18 @@ struct GeneratedProseSummary {
     @Guide(description: "Ações concretas combinadas na reunião, com responsável quando mencionado. Lista vazia se não houver nenhuma.")
     let actionItems: [String]
 }
+
+@Generable
+struct GeneratedDevSpec {
+    @Guide(description: "Título curto do que precisa ser implementado")
+    let title: String
+
+    @Guide(description: "Descrição objetiva da tarefa, com contexto suficiente pra implementação, sem inventar informação")
+    let description: String
+}
+
+@Generable
+struct GeneratedDevSpecList {
+    @Guide(description: "Tarefas de implementação distintas mencionadas na reunião. Lista vazia se nada for acionável.")
+    let specs: [GeneratedDevSpec]
+}

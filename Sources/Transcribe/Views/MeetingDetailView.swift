@@ -1,4 +1,6 @@
+import AppKit
 import SwiftUI
+import TipKit
 
 struct MeetingDetailView: View {
     @Environment(AppState.self) private var appState
@@ -22,54 +24,71 @@ struct MeetingDetailView: View {
     @State private var transcriptExpanded = false
     @State private var editingTranscript = false
 
+    @State private var showingSpecs = false
+    private let specsTip = DevSpecsEntryTip()
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                header
-                summarySection
-                if !meeting.actionItems.isEmpty { actionsSection }
-                transcriptSection
-            }
-            .padding(24)
-            .frame(maxWidth: 720, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .background(.background)
-        .toolbar {
-            ToolbarItem {
-                Button("Continuar transcrição", systemImage: "mic.badge.plus") {
-                    Task { await appState.continueMeeting(meeting) }
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    header
+                    summarySection
+                    if !meeting.actionItems.isEmpty { actionsSection }
+                    transcriptSection
                 }
-                .disabled(appState.mode == .meeting)
+                .padding(24)
+                .frame(maxWidth: 720, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            ToolbarItem {
-                Menu {
-                    Button("Copiar como Markdown") { MeetingExporter.copyToPasteboard(MeetingExporter.markdown(meeting)) }
-                    Button("Copiar como texto") { MeetingExporter.copyToPasteboard(MeetingExporter.plainText(meeting)) }
-                    Divider()
-                    Button("Exportar…") { MeetingExporter.exportToFile(meeting) }
-                } label: {
-                    Label("Compartilhar", systemImage: "square.and.arrow.up")
-                }
+            .background(.background)
+            .navigationDestination(isPresented: $showingSpecs) {
+                DevSpecsView(meeting: meeting)
             }
-            ToolbarItem {
-                Button("Salvar", systemImage: "checkmark") {
-                    save()
-                }
-                .keyboardShortcut("s", modifiers: .command)
-            }
-            ToolbarItem {
-                Button("Excluir", systemImage: "trash", role: .destructive) {
-                    confirmDelete = true
+            .toolbar { toolbarContent }
+            .deleteMeetingConfirmation(isPresented: $confirmDelete, title: meeting.title) {
+                do {
+                    try appState.store.delete(meeting)
+                    onDelete()
+                } catch {
+                    appState.errorMessage = "Não foi possível excluir a reunião: \(error.localizedDescription)"
                 }
             }
         }
-        .deleteMeetingConfirmation(isPresented: $confirmDelete, title: meeting.title) {
-            do {
-                try appState.store.delete(meeting)
-                onDelete()
-            } catch {
-                appState.errorMessage = "Não foi possível excluir a reunião: \(error.localizedDescription)"
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem {
+            Button("Continuar transcrição", systemImage: "mic.badge.plus") {
+                Task { await appState.continueMeeting(meeting) }
+            }
+            .disabled(appState.mode == .meeting)
+        }
+        ToolbarItem {
+            Button("Specs de implementação", systemImage: "hammer") {
+                showingSpecs = true
+            }
+            .popoverTip(specsTip)
+        }
+        ToolbarItem {
+            Menu {
+                Button("Copiar como Markdown") { MeetingExporter.copyToPasteboard(MeetingExporter.markdown(meeting)) }
+                Button("Copiar como texto") { MeetingExporter.copyToPasteboard(MeetingExporter.plainText(meeting)) }
+                Divider()
+                Button("Exportar…") { MeetingExporter.exportToFile(meeting) }
+            } label: {
+                Label("Compartilhar", systemImage: "square.and.arrow.up")
+            }
+        }
+        ToolbarItem {
+            Button("Salvar", systemImage: "checkmark") {
+                save()
+            }
+            .keyboardShortcut("s", modifiers: .command)
+        }
+        ToolbarItem {
+            Button("Excluir", systemImage: "trash", role: .destructive) {
+                confirmDelete = true
             }
         }
     }
