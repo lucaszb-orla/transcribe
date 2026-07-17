@@ -40,7 +40,7 @@ struct OnboardingView: View {
                 .padding(.vertical, 38)
             }
         }
-        .frame(minWidth: 820, idealWidth: 820, minHeight: 560, idealHeight: 560)
+        .frame(minWidth: 820, idealWidth: 820, maxWidth: 960, minHeight: 560, idealHeight: 560, maxHeight: 680)
         .preferredColorScheme(.dark)
         .onAppear {
             permissions.refresh()
@@ -73,6 +73,11 @@ struct OnboardingView: View {
 
             Spacer(minLength: 12)
 
+            Text("PRIVACIDADE")
+                .font(.caption2.weight(.semibold))
+                .tracking(1.7)
+                .foregroundStyle(.white.opacity(0.52))
+
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text("\(privacyPercentage)")
                     .font(.system(size: 62, weight: .semibold, design: .rounded))
@@ -81,6 +86,7 @@ struct OnboardingView: View {
                     .font(.system(size: 27, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.7))
             }
+            .padding(.top, 6)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(privacyPercentage) por cento no seu Mac")
 
