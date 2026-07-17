@@ -19,6 +19,7 @@ Brasil (pt-BR)**.
   - `ScreenCaptureKit`: captura do áudio do sistema (outros participantes).
   - `AVAudioEngine`: captura do microfone.
   - `EventKit`: sugere gravação a partir de reuniões do calendário com link de chamada.
+  - `TipKit`: dica contextual de primeiro uso (`DevSpecsTips.swift`).
 
 ## Build & Run
 
@@ -212,6 +213,28 @@ linguagem natural continua no campo **Instruções adicionais** do resumo, sem t
 - **Merges concorrentes são a norma neste repo**, não exceção — várias sessões/worktrees mexem aqui ao
   mesmo tempo (ver Workflow). `git push` direto em `main` frequentemente é rejeitado por
   non-fast-forward; isso é esperado, não um erro pra investigar, só `fetch` + `pull` + resolver.
+- **`Process` com `Pipe()` de stderr nunca lido trava pra sempre.** Se o filho escrever o suficiente em
+  stderr e ninguém ler, o buffer enche e ele trava (era o bug "fica só aguardando" na primeira versão
+  do `ClaudeCodeRunner`, que rodava o `claude` em background dentro do próprio app). Use
+  `FileHandle.nullDevice` quando não for consumir o stream, ou drene ativamente.
+- **`SystemLanguageModel.contextSize` é pequeno (~4096 tokens).** Uma reunião de ~30min sozinha já pode
+  estourar isso, antes mesmo de contar instruções/saída. Quem gera specs on-device precisa quebrar a
+  transcrição em pedaços; trate `LanguageModelSession.GenerationError.exceededContextWindowSize` com
+  mensagem própria, não deixe o erro cru do framework vazar pra UI.
+- **App GUI não herda o PATH do shell do usuário.** Rodar `git`/`gh`/`claude` a partir do próprio
+  processo do app (não de um Terminal) exige resolver o binário via shell de login
+  (`/bin/zsh -l -c "command -v X"`) primeiro. É por isso que `ClaudeCodeRunner` abre um Terminal de
+  verdade pra rodar o `claude` autônomo em vez de gerenciar o processo direto: o Terminal já tem o PATH
+  normal do usuário, sem essa ginástica.
+- **`claude --dangerously-skip-permissions`/`--permission-mode bypassPermissions` é recusado** pela
+  própria Anthropic como uso perigoso. Pra automação sem prompt interativo a cada passo, use
+  `--permission-mode acceptEdits --allowedTools Bash`.
+- **Automação de UI via `osascript`/System Events exige permissão de Acessibilidade**, que não está
+  concedida neste Mac pro Terminal/agente: `keystroke` e consultas de janela falham. Screenshot de tela
+  inteira (`screencapture -x`) funciona sem essa permissão, mas rouba o foco de qualquer janela que o
+  usuário esteja usando de verdade e pode capturar conteúdo alheio à tarefa (outras janelas, outra
+  sessão) — evite ativar/focar janelas de outros apps à toa, principalmente com o usuário ativo na
+  máquina.
 
 ## Próximos passos possíveis
 
