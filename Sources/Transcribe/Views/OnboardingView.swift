@@ -1,136 +1,214 @@
 import AppKit
 import SwiftUI
 
-/// Shown until mic, calendar, and speech-recognition access are all granted. Each permission is
-/// requested explicitly (see `PermissionsManager`) instead of hoping AVAudioEngine/SpeechAnalyzer's
-/// implicit first-use prompt fires reliably.
 struct OnboardingView: View {
+    @Environment(AppState.self) private var appState
     @Environment(PermissionsManager.self) private var permissions
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var privacyPercentage = 0
+    @State private var showCompletion = false
+    @State private var replay = OnboardingReplay()
+
     var onFinished: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Bem-vindo ao Transcribe").font(.title2).bold()
-                Text("Antes de começar, precisamos de quatro permissões do macOS.")
-                    .foregroundStyle(.secondary)
-            }
+        ZStack {
+            Color(red: 0.025, green: 0.026, blue: 0.03)
+                .ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 0) {
-                row(
-                    icon: "mic.fill",
-                    title: "Microfone",
-                    detail: "Grava sua fala durante as reuniões.",
-                    status: permissions.microphone
-                ) { Task { await permissions.requestMicrophone() } }
-                Divider()
-                row(
-                    icon: "waveform",
-                    title: "Reconhecimento de fala",
-                    detail: "Transcreve o áudio no dispositivo.",
-                    status: permissions.speechRecognition
-                ) { Task { await permissions.requestSpeechRecognition() } }
-                Divider()
-                row(
-                    icon: "calendar",
-                    title: "Calendário",
-                    detail: "Sugere gravação quando uma reunião com link está prestes a começar.",
-                    status: permissions.calendar
-                ) { Task { await permissions.requestCalendar() } }
-                Divider()
-                screenRecordingRow
-            }
+            HStack(spacing: 0) {
+                privacyColumn
+                    .frame(minWidth: 300, idealWidth: 336, maxWidth: 380)
 
-            Spacer(minLength: 0)
+                Rectangle()
+                    .fill(.white.opacity(0.1))
+                    .frame(width: 1)
+                    .padding(.vertical, 38)
 
-            HStack {
-                Spacer()
-                Button("Continuar") { onFinished() }
-                    .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!permissions.allGranted)
+                OnboardingPermissionPanel(
+                    stage: stage,
+                    status: activeStatus,
+                    grantedRequiredCount: grantedRequiredCount,
+                    reduceMotion: reduceMotion,
+                    primaryTitle: primaryTitle,
+                    secondaryTitle: secondaryTitle,
+                    primaryAction: performPrimaryAction,
+                    secondaryAction: performSecondaryAction
+                )
+                .frame(minWidth: 410, maxWidth: .infinity)
+                .padding(.horizontal, 42)
+                .padding(.vertical, 38)
             }
         }
-        .padding(24)
-        .frame(minWidth: 480, minHeight: 460)
-        .onAppear { permissions.refresh() }
-    }
-
-    private func row(icon: String, title: String, detail: String, status: PermissionStatus, request: @escaping () -> Void) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
-                Text(detail).font(.caption).foregroundStyle(.secondary)
+        .frame(minWidth: 820, idealWidth: 820, minHeight: 560, idealHeight: 560)
+        .preferredColorScheme(.dark)
+        .onAppear {
+            permissions.refresh()
+            if reduceMotion {
+                privacyPercentage = 100
+            } else {
+                withAnimation(.easeOut(duration: 0.8)) { privacyPercentage = 100 }
             }
-            Spacer()
-            statusControl(status, request: request)
         }
-        .padding(.vertical, 4)
-    }
-
-    @ViewBuilder
-    private func statusControl(_ status: PermissionStatus, request: @escaping () -> Void) -> some View {
-        switch status {
-        case .granted:
-            Label("Permitido", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-                .labelStyle(.iconOnly)
-        case .denied:
-            HStack(spacing: 6) {
-                Text("Negado").font(.caption).foregroundStyle(.red)
-                Button("Abrir Ajustes", action: openPrivacySettings)
-                    .controlSize(.small)
-            }
-        case .notDetermined:
-            Button("Permitir", action: request)
-                .controlSize(.small)
+        .onChange(of: reduceMotion) {
+            if reduceMotion { privacyPercentage = 100 }
+        }
+        .onChange(of: permissions.isOnboardingReplayActive) {
+            if permissions.isOnboardingReplayActive { replay = OnboardingReplay() }
         }
     }
 
-    /// Screen Recording is special: macOS only re-checks this permission for a process at launch,
-    /// so if you grant it in System Settings while Transcribe is already running, `CGPreflightScreenCaptureAccess`
-    /// keeps reporting the old (denied) state until the app is relaunched — it's not a bug in our check.
-    private var screenRecordingRow: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "rectangle.on.rectangle")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Gravação de tela").font(.headline)
-                Text("Necessária para capturar o áudio do sistema (os outros participantes), mesmo sem gravar vídeo.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                if permissions.screenRecording != .granted {
-                    HStack(spacing: 6) {
-                        Text("Já ativou em Ajustes do Sistema e continua pendente aqui?")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Button("Reiniciar o Transcribe") { relaunchApp() }
-                            .buttonStyle(.link)
-                            .font(.caption2)
-                    }
-                    .padding(.top, 4)
+    private var privacyColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("TRANSCRIBE")
+                .font(.caption2.weight(.semibold))
+                .tracking(2.4)
+                .foregroundStyle(.white.opacity(0.58))
+
+            Spacer(minLength: 12)
+
+            Image("OnboardingHero")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 250, maxHeight: 250)
+                .accessibilityHidden(true)
+
+            Spacer(minLength: 12)
+
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text("\(privacyPercentage)")
+                    .font(.system(size: 62, weight: .semibold, design: .rounded))
+                    .contentTransition(reduceMotion ? .opacity : .numericText(value: Double(privacyPercentage)))
+                Text("%")
+                    .font(.system(size: 27, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(privacyPercentage) por cento no seu Mac")
+
+            Text("no seu Mac")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.92))
+
+            Text("Seu áudio não vai para a nuvem. A transcrição e o resumo acontecem aqui.")
+                .font(.callout)
+                .foregroundStyle(.white.opacity(0.58))
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 10)
+        }
+        .padding(.leading, 44)
+        .padding(.trailing, 36)
+        .padding(.vertical, 38)
+    }
+
+    private var stage: OnboardingStage {
+        if permissions.isOnboardingReplayActive { return replay.stage }
+        return OnboardingFlow.stage(
+            for: permissions.snapshot,
+            showCompletion: showCompletion
+        )
+    }
+
+    private var grantedRequiredCount: Int {
+        permissions.isOnboardingReplayActive
+            ? replay.grantedRequiredCount
+            : permissions.grantedRequiredCount
+    }
+
+    private var activeStatus: PermissionStatus {
+        if permissions.isOnboardingReplayActive { return .notDetermined }
+        switch stage {
+        case .microphone: return permissions.microphone
+        case .speechRecognition: return permissions.speechRecognition
+        case .screenRecording: return permissions.screenRecording
+        case .calendar: return permissions.calendar
+        case .complete: return .granted
+        }
+    }
+
+    private var primaryTitle: String {
+        switch stage {
+        case .microphone, .speechRecognition, .screenRecording:
+            activeStatus == .denied ? "Abrir Ajustes" : "Permitir"
+        case .calendar:
+            switch activeStatus {
+            case .granted: "Continuar"
+            case .denied: "Abrir Ajustes"
+            case .notDetermined: "Conectar Calendário"
+            }
+        case .complete: "Ver minhas reuniões"
+        }
+    }
+
+    private var secondaryTitle: String? {
+        switch stage {
+        case .screenRecording where activeStatus == .denied: "Reiniciar o Transcribe"
+        case .calendar: "Agora não"
+        default: nil
+        }
+    }
+
+    private func performPrimaryAction() {
+        if permissions.isOnboardingReplayActive, stage != .complete {
+            advanceReplay()
+            return
+        }
+
+        switch stage {
+        case .microphone:
+            if activeStatus == .denied { openPrivacySettings(for: stage) }
+            else { Task { await permissions.requestMicrophone() } }
+        case .speechRecognition:
+            if activeStatus == .denied { openPrivacySettings(for: stage) }
+            else { Task { await permissions.requestSpeechRecognition() } }
+        case .screenRecording:
+            if activeStatus == .denied { openPrivacySettings(for: stage) }
+            else { permissions.requestScreenRecording() }
+        case .calendar:
+            if activeStatus == .denied {
+                openPrivacySettings(for: stage)
+            } else if activeStatus == .granted {
+                showReady()
+            } else {
+                Task {
+                    await appState.requestCalendarIntegration()
+                    showReady()
                 }
             }
-            Spacer()
-            statusControl(permissions.screenRecording) { permissions.requestScreenRecording() }
-        }
-        .padding(.vertical, 4)
-    }
-
-    private func openPrivacySettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy") {
-            NSWorkspace.shared.open(url)
+        case .complete:
+            permissions.completeOnboarding()
+            onFinished()
         }
     }
 
-    /// Screen Recording grants only take effect for a *new* process, so this is the only way to make
-    /// the app pick up a permission the user just flipped on in System Settings.
+    private func performSecondaryAction() {
+        switch stage {
+        case .screenRecording: relaunchApp()
+        case .calendar: showReady()
+        default: break
+        }
+    }
+
+    private func showReady() {
+        if permissions.isOnboardingReplayActive {
+            advanceReplay()
+            return
+        }
+        if reduceMotion { showCompletion = true }
+        else { withAnimation(.easeOut(duration: 0.45)) { showCompletion = true } }
+    }
+
+    private func advanceReplay() {
+        if reduceMotion { replay.advance() }
+        else { withAnimation(.easeOut(duration: 0.45)) { replay.advance() } }
+    }
+
+    private func openPrivacySettings(for stage: OnboardingStage) {
+        guard let anchor = stage.privacySettingsAnchor,
+              let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)") else { return }
+        NSWorkspace.shared.open(url)
+    }
+
     private func relaunchApp() {
         let url = Bundle.main.bundleURL
         NSWorkspace.shared.open(url, configuration: NSWorkspace.OpenConfiguration()) { _, _ in
