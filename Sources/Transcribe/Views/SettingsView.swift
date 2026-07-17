@@ -5,6 +5,8 @@ import SwiftUI
 /// Preferences window (⌘,): which microphone to record and which language to transcribe.
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openWindow) private var openWindow
     @State private var devices: [AudioInputDevice] = []
     @State private var locales: [Locale] = []
     @State private var pendingPresetDelete: SummaryPreset?
@@ -42,10 +44,15 @@ struct SettingsView: View {
 
             Section {
                 Toggle("Iniciar e encerrar gravação automaticamente", isOn: $settings.autoRecordFromCalendar)
+                    .disabled(!appState.permissions.snapshot.calendarAutomationAvailable)
             } header: {
                 Text("Calendário")
             } footer: {
-                Text("Grava sozinho quando uma reunião do calendário com link de chamada começa e para no fim do evento — sem precisar clicar.")
+                if appState.permissions.snapshot.calendarAutomationAvailable {
+                    Text("Grava sozinho quando uma reunião do calendário com link de chamada começa e para no fim do evento, sem precisar clicar.")
+                } else {
+                    Text("Conecte o Calendário na tela de Reuniões para ativar esta automação.")
+                }
             }
 
             Section {
@@ -78,7 +85,7 @@ struct SettingsView: View {
             } header: {
                 Text("Salvamento automático")
             } footer: {
-                Text("Ao encerrar cada transcrição, salva uma cópia em Markdown (.md) na pasta escolhida — além do que o app já guarda por conta própria.")
+                Text("Ao encerrar cada transcrição, salva uma cópia em Markdown (.md) na pasta escolhida, além do que o app já guarda por conta própria.")
             }
 
             Section("Presets de resumo") {
@@ -105,9 +112,30 @@ struct SettingsView: View {
                     }
                 }
             }
+
+            #if DEBUG
+            Section {
+                Button("Rever onboarding", systemImage: "arrow.counterclockwise") {
+                    appState.permissions.beginOnboardingReplay()
+                    openWindow(id: "meetings")
+                    dismiss()
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                .accessibilityHint("Mostra todas as etapas sem solicitar novamente as permissões do macOS")
+                .disabled(appState.mode == .meeting)
+            } header: {
+                Text("Desenvolvimento")
+            } footer: {
+                if appState.mode == .meeting {
+                    Text("Encerre a transcrição atual para rever o onboarding.")
+                } else {
+                    Text("Reproduz o onboarding completo sem alterar as permissões ou a conclusão já salva.")
+                }
+            }
+            #endif
         }
         .formStyle(.grouped)
-        // Resizable within sensible bounds — a fixed frame made the Settings window non-resizable.
+        // Resizable within sensible bounds. A fixed frame made the Settings window non-resizable.
         .frame(
             minWidth: 460, idealWidth: 520, maxWidth: 720,
             minHeight: 420, idealHeight: 520, maxHeight: 820

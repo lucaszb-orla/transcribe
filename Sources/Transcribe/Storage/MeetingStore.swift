@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Local-only persistence: one JSON file per meeting under Application Support.
-/// No sync, no backend — see PRD "Armazenamento".
+/// No sync and no backend. See PRD "Armazenamento".
 @Observable
 final class MeetingStore {
     private(set) var meetings: [Meeting] = []
@@ -44,7 +44,7 @@ final class MeetingStore {
     }
 
     /// Moves the meeting's file to the Trash rather than deleting it outright, so a mis-click
-    /// is recoverable — matches the HIG preference for undo-able actions over confirmation alerts.
+    /// is recoverable. This matches the HIG preference for undo-able actions over confirmation alerts.
     func delete(_ meeting: Meeting) throws {
         try FileManager.default.trashItem(at: fileURL(for: meeting), resultingItemURL: nil)
         reload()

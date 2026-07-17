@@ -22,13 +22,13 @@ final class RecordingSession {
     private let mic = MicrophoneCapture()
     private let systemAudio = SystemAudioCapture()
     /// Separate recognizer per source (instead of one mixed stream) so segments can be tagged
-    /// "Você" vs. "Participantes" — the app already captures these two streams independently.
+    /// "Você" vs. "Participantes". The app already captures these two streams independently.
     private let micTranscriber = Transcriber(speaker: .me)
     private let systemTranscriber = Transcriber(speaker: .others)
     private var startedAt: Date?
 
     /// Called if system-audio capture stops unexpectedly mid-meeting (e.g. Screen Recording
-    /// permission revoked, display disconnected) — mic audio keeps being transcribed either way,
+    /// permission revoked, display disconnected). Mic audio keeps being transcribed either way,
     /// but the caller should surface this since the other participants' audio is now missing.
     var onSystemAudioError: ((Error) -> Void)?
 

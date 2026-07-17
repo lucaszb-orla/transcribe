@@ -11,7 +11,7 @@ private let logger = Logger(subsystem: "com.lucasbaggiotto.Transcribe", category
 /// (see PRD risks on proper-noun/acronym accuracy, WhisperKit as fallback).
 ///
 /// One instance handles a single audio source (mic or system audio) so its segments can be
-/// tagged with `speaker` — `RecordingSession` runs two of these to split "Você" vs.
+/// tagged with `speaker`. `RecordingSession` runs two of these to split "Você" vs.
 /// "Participantes" without needing real diarization.
 @Observable
 final class Transcriber {
@@ -28,7 +28,7 @@ final class Transcriber {
 
     /// Finalized segments (stable, used for the saved transcript).
     private(set) var segments: [TranscriptSegment] = []
-    /// The in-progress phrase the recognizer hasn't finalized yet — shown live, then replaced.
+    /// The in-progress phrase the recognizer hasn't finalized yet. It is shown live, then replaced.
     private(set) var volatileText: String = ""
 
     /// What the recording UI displays: everything finalized so far plus the current partial phrase.
@@ -92,7 +92,7 @@ final class Transcriber {
                     }
                 }
             } catch {
-                // Stream ended (finalize was called) — nothing to recover.
+                // Stream ended because finalize was called. Nothing to recover.
             }
         }
 
