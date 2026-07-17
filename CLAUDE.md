@@ -4,6 +4,11 @@ App nativo de macOS (menu bar + janela) que **transcreve reuniões on-device** e
 com IA local. Zero nuvem, zero dependências externas. Toda a UI e a saída de IA são em **português do
 Brasil (pt-BR)**.
 
+> **Exceção deliberada:** a feature de "Specs de implementação" (ver Arquitetura e Gotchas) sai desse
+> princípio de propósito, chamando o CLI real `claude` (e `gh`) para transformar itens de reunião em
+> PRs. É opt-in, visível (abre um Terminal de verdade) e vive isolada em `ClaudeCodeRunner.swift`. O
+> resto do app (transcrição, resumo, armazenamento) continua 100% on-device.
+
 ## Stack
 
 - **Swift 5 / SwiftUI**, deployment target **macOS 26**, Apple Silicon.
@@ -23,10 +28,20 @@ xcodebuild -project Transcribe.xcodeproj -scheme Transcribe -configuration Debug
 open ~/Library/Developer/Xcode/DerivedData/Transcribe-*/Build/Products/Debug/Transcribe.app
 ```
 
-- **Pra aparecer no Spotlight/Launchpad:** o build fica em `DerivedData`, que não é indexado. Depois de
-  buildar, copia pra `/Applications` (preserva a assinatura com `ditto`, não `cp`):
+- **Cuidado com o glob `Transcribe-*` do DerivedData:** o hash muda de vez em quando (ex.: depois de um
+  `xcodegen generate` que mexe bastante no projeto), e pastas antigas ficam pra trás. `ls -d .../Transcribe-*`
+  ordena alfabeticamente, não por data. Já rolou de pegar um build **desatualizado** sem querer (ex.: um
+  recurso novo "sumindo" porque a cópia usada não era a mais recente). Pegue o caminho certo assim:
   ```sh
-  ditto ~/Library/Developer/Xcode/DerivedData/Transcribe-*/Build/Products/Debug/Transcribe.app /Applications/Transcribe.app
+  xcodebuild -project Transcribe.xcodeproj -scheme Transcribe -configuration Debug -showBuildSettings \
+    | awk -F'= ' '/ BUILT_PRODUCTS_DIR /{print $2; exit}'
+  ```
+  E de vez em quando limpe as pastas `Transcribe-*` que não batem com esse caminho (é só cache de build).
+- **Pra aparecer no Spotlight/Launchpad:** o build fica em `DerivedData`, que não é indexado. Depois de
+  buildar, copia pro caminho acima (não o glob) pra `/Applications` (preserva a assinatura com `ditto`,
+  não `cp`):
+  ```sh
+  ditto "$CANONICAL/Transcribe.app" /Applications/Transcribe.app
   ```
   A partir daí abra/rode o de `/Applications` (não o de `DerivedData`), pra não ter duas cópias
   divergentes. Repita a cada rebuild.
@@ -42,7 +57,19 @@ open ~/Library/Developer/Xcode/DerivedData/Transcribe-*/Build/Products/Debug/Tra
   correção ou funcionalidade nova builda e roda, commita antes de seguir pra próxima coisa.
 - **Usar worktree separada por padrão.** Pra não dar conflito de arquivo quando há mais de uma tarefa
   mexendo no repo ao mesmo tempo, cada tarefa nova roda em uma `git worktree` própria em vez de tudo
-  direto na working copy principal.
+  direto na working copy principal. Essas worktrees vivem em `.claude/worktrees/` (gitignored: são
+  checkouts de verdade, não devem ser versionadas a partir do repo principal).
+- **Múltiplas sessões mexem neste repo ao mesmo tempo** (você não é o único agente trabalhando aqui).
+  Antes de `git push`, sempre `git fetch` + `git pull --no-rebase` primeiro; espere divergência.
+  Conflito quase sempre cai no `Transcribe.xcodeproj/project.pbxproj` (é gerado): não resolva na mão,
+  pegue um dos dois lados (`git checkout --theirs` ou `--ours`) e rode `xcodegen generate` de novo.
+  Depois builda e roda os testes antes de empurrar, mesmo que o merge não tenha dado conflito.
+- **Mantenha este arquivo atualizado.** Sempre que você (agente) terminar uma feature, um fix não óbvio,
+  ou aprender um gotcha novo, atualize este `CLAUDE.md` na mesma sessão (arquitetura, "Feito até agora",
+  "Gotchas conhecidos") antes de considerar a tarefa concluída — é a única memória persistente entre
+  sessões/agentes diferentes trabalhando neste projeto. Prefira editar as seções existentes a duplicar
+  informação; se algo documentado aqui ficou obsoleto (feature removida, decisão revertida), corrija em
+  vez de deixar o arquivo mentir.
 
 ## Direção de UI e texto
 
@@ -55,16 +82,18 @@ open ~/Library/Developer/Xcode/DerivedData/Transcribe-*/Build/Products/Debug/Tra
 ```
 Sources/Transcribe/
   App/
-    TranscribeApp.swift     # @main: MenuBarExtra + Window(RootView) + Settings(SettingsView)
+    TranscribeApp.swift     # @main: MenuBarExtra + Window(RootView) + Settings(SettingsView); Tips.configure()
     AppState.swift          # @MainActor @Observable, estado central, orquestra tudo
   Models/
-    Meeting.swift           # Meeting + TranscriptSegment (Codable, salvos em JSON)
+    Meeting.swift           # Meeting + TranscriptSegment + Speaker (Codable, salvos em JSON)
     MeetingSummary.swift    # SummaryOptions, SummaryResult, @Generable dos resumos
+    DevSpec.swift            # tarefa de implementação extraída de uma reunião, pra virar PR
+    DevSpecOptions.swift     # modelo/effort do `claude` usado pra gerar e rodar as specs
   Services/
-    RecordingSession.swift  # junta mic + áudio do sistema, alimenta o transcritor; pause/resume; micLevel
+    RecordingSession.swift  # mic + áudio do sistema em dois Transcriber separados; pause/resume; micLevel; dedup de eco
     MicrophoneCapture.swift # tap no inputNode do AVAudioEngine; seleção de dispositivo
     SystemAudioCapture.swift# ScreenCaptureKit (áudio do sistema, sem gravar vídeo)
-    Transcriber.swift       # SpeechAnalyzer + resultados finais e "volatile" (ao vivo)
+    Transcriber.swift       # SpeechAnalyzer, tagueado por Speaker; resultados finais e "volatile" (ao vivo)
     CMSampleBuffer+PCM.swift # conversão de buffer do ScreenCaptureKit
     Summarizer.swift        # resumo via FoundationModels (bullets/prosa + itens de ação)
     SummaryPresets.swift    # presets nomeados de SummaryOptions (persistidos)
@@ -73,18 +102,26 @@ Sources/Transcribe/
     PermissionsManager.swift# 3 acessos essenciais + Calendário opcional + conclusão do onboarding
     AudioDevices.swift      # enumera dispositivos de entrada (Core Audio) + AppSettings
     MeetingExporter.swift   # Markdown/texto, copiar, exportar arquivo, salvamento automático em pasta
+    ClaudeCodeRunner.swift   # gera DevSpecs via `claude -p` headless; abre Terminal visível rodando
+                             # `claude` autônomo (implementa + push + `gh pr create`); ver Gotchas
   Storage/
     MeetingStore.swift      # persistência local: 1 JSON por reunião em Application Support
   Views/
     RootView.swift          # gate de onboarding → RecordingView (gravando) ou MeetingListView
-    OnboardingView.swift    # fluxo editorial: 3 acessos essenciais + Calendário opcional
+    OnboardingView.swift    # fluxo editorial: 3 acessos essenciais + Calendário opcional + logo animado
     OnboardingPermissionPanel.swift # etapa ativa, progresso 0/3...3/3 e ações de permissão
-    RecordingView.swift     # tela "Gravando": status, cronômetro, transcrição ao vivo, medidor de nível, pause/stop
+    LoopingVideoView.swift   # AVQueuePlayer + AVPlayerLooper: logo animado em loop mudo (ver Gotchas)
+    RecordingView.swift     # tela "Gravando": status, cronômetro, transcrição em balões, medidor, pause/stop
+    TranscriptBubbles.swift  # transcrição em formato chat (Você à direita, Participantes à esquerda)
     MeetingListView.swift   # lista + busca + excluir; abre a reunião recém-gravada
-    MeetingDetailView.swift # título/participantes; gerar resumo (opções+presets); follow-up; transcrição editável; exportar
-    SettingsView.swift      # ⌘,: microfone + idioma da transcrição
+    MeetingDetailView.swift # título/participantes; gerar resumo (opções+presets); specs de implementação;
+                             # transcrição em balões (editável); exportar
+    DevSpecsView.swift       # lista de specs extraídas da reunião; dispara o ClaudeCodeRunner por spec
+    DevSpecsTips.swift       # TipKit: dica contextual pro botão "Specs de implementação"
+    SettingsView.swift      # ⌘,: microfone, idioma, salvamento automático, rever onboarding
     MenuBarView.swift       # controles rápidos na barra de menu
-Tests/TranscribeTests/      # CallLinkDetectorTests + PermissionPolicyTests
+    ConfirmationDialogs.swift # diálogos compartilhados de confirmação (encerrar gravação, apagar)
+Tests/TranscribeTests/      # CallLinkDetectorTests + PermissionPolicyTests + ClaudeCodeRunnerTests
 ```
 
 **Fluxo:** Standby (monitorando calendário somente quando conectado) ↔ Meeting (gravando). Ao
@@ -117,8 +154,8 @@ disco** (por design). Nada de nuvem/sync.
 
 - Onboarding editorial com arte cromada e progresso 0/3...3/3; pede os três acessos essenciais em
   sequência e oferece Calendário como extra pulável.
-- Gravação: mic + áudio do sistema mixados no transcritor, **transcrição ao vivo**, **pause/retomar**,
-  **medidor de nível** do microfone.
+- Gravação: mic + áudio do sistema, **transcrição ao vivo**, **pause/retomar**, **medidor de nível** do
+  microfone.
 - Ajustes: seleção de **microfone** e **idioma** (padrão pt-BR).
 - Resumo **sob demanda**: formato **tópicos ou prosa**, toggle de **itens de ação**, **instruções
   personalizadas**, e **presets** (Reunião geral, Daily/Standup, Call de vendas, 1:1).
@@ -133,11 +170,21 @@ disco** (por design). Nada de nuvem/sync.
 - **Transcrição dividida por falante** ("Você" vs. "Participantes"): mic e áudio do sistema passam por
   dois `Transcriber` separados, cada um tagueando seus segmentos, não é diarização de verdade (não
   separa os participantes remotos entre si, que chegam misturados no áudio do sistema).
+- **Transcrição em formato chat**: balões estilo WhatsApp/iMessage (Você à direita, Participantes à
+  esquerda), largura responsiva por `GeometryReader`, agrupando segmentos consecutivos do mesmo falante.
+- **Dedup de eco mic × áudio do sistema**: sem fone, o mic capta o que sai pelo alto-falante do Mac e
+  duplicava a fala de participantes como se fosse do usuário; heurística por proximidade de tempo +
+  similaridade de texto descarta o lado do mic quando bate com o do áudio do sistema.
 - **Continuar transcrição** depois de encerrada, sem precisar criar uma reunião nova.
 - Confirmação antes de encerrar gravação ou apagar qualquer coisa (reunião, preset).
 - Lista com busca, excluir, e navegação automática pra reunião recém-gravada.
-- Ajustes acessível por botão visível (menu da barra + toolbar), além de ⌘,.
-- Ícone do app e ícone da menu bar (`quote.bubble` / `quote.bubble.fill` gravando).
+- Ajustes acessível por botão visível (menu da barra + toolbar), além de ⌘,; inclui "Rever onboarding".
+- Ícone do app e ícone da menu bar (`quote.bubble` / `quote.bubble.fill` gravando); logo animado (loop
+  mudo) na tela de onboarding, com fallback estático se Reduzir Movimento estiver ativo.
+- **Specs de implementação (0.1-alpha, exceção "zero cloud")**: extrai tarefas de implementação da
+  transcrição via `claude -p` headless, e por spec abre um Terminal visível rodando `claude` autônomo
+  que implementa, faz commit/push numa branch `transcribe/...` e abre PR com `gh pr create`. Exige
+  `claude` e `gh` instalados e autenticados no PATH; nunca roda escondido. Ver Gotchas.
 
 Nota: o "rascunho de follow-up" foi removido (não ficou bom). A ideia de direcionar a IA por
 linguagem natural continua no campo **Instruções adicionais** do resumo, sem toggles de tom.
@@ -151,6 +198,20 @@ linguagem natural continua no campo **Instruções adicionais** do resumo, sem t
   que é suportado e já vem instalado neste Mac).
 - **FoundationModels exige Apple Intelligence ativado**: se não estiver, resumo/follow-up lançam erro
   legível (`appleIntelligenceNotEnabled`) sem quebrar a transcrição.
+- **DerivedData com hash duplicado:** ver "Build & Run". Sempre confirme o `BUILT_PRODUCTS_DIR` via
+  `-showBuildSettings` antes de copiar/abrir o `.app` — um glob alfabético já pegou build velho sem avisar.
+- **`AVPlayerLayer` atribuído direto a `view.layer` não acompanha o resize da view sozinho.** Sem
+  sobrescrever `layout()` pra fazer `videoLayer.frame = bounds`, o layer fica travado no frame `.zero`
+  inicial e o fundo padrão da `NSView` aparece como uma "moldura" ao redor do vídeo (bug real, já
+  corrigido em `LoopingVideoView.swift` — se for reusar esse padrão em outro lugar, não esqueça o `layout()`).
+- **`.frame(maxWidth:maxHeight:)` num `ZStack` capa o fundo junto com o conteúdo.** No onboarding, isso
+  fazia o fundo parar de preencher a janela quando ela era maior que o cap (a janela é compartilhada
+  com a lista de reuniões e lembra o tamanho salvo) — o cinza padrão da janela aparecia como borda ao
+  redor do conteúdo capado e centralizado. Fix: cap só no conteúdo interno (ex.: o `HStack` das colunas),
+  nunca no `ZStack`/`Color.ignoresSafeArea()` que serve de fundo.
+- **Merges concorrentes são a norma neste repo**, não exceção — várias sessões/worktrees mexem aqui ao
+  mesmo tempo (ver Workflow). `git push` direto em `main` frequentemente é rejeitado por
+  non-fast-forward; isso é esperado, não um erro pra investigar, só `fetch` + `pull` + resolver.
 
 ## Próximos passos possíveis
 
