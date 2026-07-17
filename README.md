@@ -58,6 +58,8 @@ O **Calendário é opcional** e aparece só depois das três essenciais. Dá par
 gravação; o Transcribe nunca abre esse prompt sozinho. Depois, a integração pode ser conectada pelo
 aviso na lista de reuniões ou pelos Ajustes.
 
+![Onboarding do Transcribe](docs/screenshot-onboarding.png)
+
 ## 🗂️ Arquitetura
 
 SwiftUI + XcodeGen. Estado central em `AppState` (máquina de estados Standby ↔ Meeting). Captura de
