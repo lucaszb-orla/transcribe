@@ -16,13 +16,15 @@ struct LoopingVideoView: NSViewRepresentable {
     final class PlayerLayerView: NSView {
         private let player = AVQueuePlayer()
         private var looper: AVPlayerLooper?
+        private let videoLayer = AVPlayerLayer()
 
         init(url: URL) {
             super.init(frame: .zero)
             wantsLayer = true
-            let playerLayer = AVPlayerLayer(player: player)
-            playerLayer.videoGravity = .resizeAspect
-            layer = playerLayer
+            videoLayer.videoGravity = .resizeAspect
+            videoLayer.backgroundColor = .clear
+            videoLayer.player = player
+            layer = videoLayer
 
             player.isMuted = true
             let item = AVPlayerItem(url: url)
@@ -32,6 +34,18 @@ struct LoopingVideoView: NSViewRepresentable {
 
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+
+        // `layer` was set directly to `videoLayer` instead of using it as a sublayer, so nothing
+        // keeps its frame in sync with the view's bounds automatically — without this, the layer
+        // stays at its initial `.zero` frame and the view's own background shows through as a
+        // visible box around the (tiny/misplaced) video.
+        override func layout() {
+            super.layout()
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            videoLayer.frame = bounds
+            CATransaction.commit()
         }
     }
 }
