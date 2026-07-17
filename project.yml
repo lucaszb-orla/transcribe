@@ -27,7 +27,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lucasbaggiotto.Transcribe
         MARKETING_VERSION: "0.1-alpha"
-        CURRENT_PROJECT_VERSION: "3"
+        CURRENT_PROJECT_VERSION: "4"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
   TranscribeTests:
     type: bundle.unit-test
