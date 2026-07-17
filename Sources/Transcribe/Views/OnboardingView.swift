@@ -39,8 +39,13 @@ struct OnboardingView: View {
                 .padding(.horizontal, 42)
                 .padding(.vertical, 38)
             }
+            .frame(maxWidth: 960, maxHeight: 680)
         }
-        .frame(minWidth: 820, idealWidth: 820, maxWidth: 960, minHeight: 560, idealHeight: 560, maxHeight: 680)
+        // The background fills the window at whatever size it happens to be (e.g. a size
+        // remembered from the meeting list, shown in the same window) — only the two-column
+        // content above is capped, so a bigger window doesn't leave the window's own background
+        // showing as a border around a smaller, centered box.
+        .frame(minWidth: 820, idealWidth: 820, minHeight: 560, idealHeight: 560)
         .preferredColorScheme(.dark)
         .onAppear {
             permissions.refresh()
