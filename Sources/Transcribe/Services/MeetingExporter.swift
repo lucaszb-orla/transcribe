@@ -53,7 +53,7 @@ enum MeetingExporter {
     private static func dateLine(_ m: Meeting) -> String {
         var line = m.startedAt.formatted(date: .long, time: .shortened)
         if let end = m.endedAt {
-            line += " – " + end.formatted(date: .omitted, time: .shortened)
+            line += " a " + end.formatted(date: .omitted, time: .shortened)
         }
         return line
     }
@@ -64,7 +64,7 @@ enum MeetingExporter {
         pb.setString(string, forType: .string)
     }
 
-    /// Writes the Markdown transcript straight to `folder`, no dialog — used by the opt-in
+    /// Writes the Markdown transcript straight to `folder`, with no dialog. Used by the opt-in
     /// auto-export setting right after a meeting is saved. Throws instead of swallowing errors so
     /// the caller can surface a permission/missing-folder problem to the user.
     @MainActor static func autoSave(_ meeting: Meeting, to folder: URL) throws {

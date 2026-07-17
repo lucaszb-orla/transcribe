@@ -99,7 +99,7 @@ final class AppSettings {
     }
 
     /// Opt-in: mirror every saved transcript as a Markdown file in `autoExportFolderPath`. Off by
-    /// default — this is a local convenience export, not a replacement for the app's own storage.
+    /// default. This is a local convenience export, not a replacement for the app's own storage.
     var autoExportEnabled: Bool {
         didSet { UserDefaults.standard.set(autoExportEnabled, forKey: Self.autoExportEnabledKey) }
     }

@@ -117,7 +117,7 @@ struct MenuBarView: View {
             }
             .tint(.red)
         } else if appState.suggestion == nil {
-            // Primary action in standby — the calendar suggestion banner already carries a prominent
+            // Primary action in standby. The calendar suggestion banner already carries a prominent
             // CTA, so only emphasize here when there's no banner (avoids two competing blue buttons).
             Button("Nova transcrição", systemImage: "record.circle") {
                 Task { await appState.startMeeting() }

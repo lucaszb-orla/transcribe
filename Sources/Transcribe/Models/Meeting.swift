@@ -1,6 +1,6 @@
 import Foundation
 
-/// Which capture source produced a segment. Not identity-based diarization — just the two
+/// Which capture source produced a segment. Not identity-based diarization, just the two
 /// streams the app already records separately (your mic vs. everyone else, mixed together
 /// via ScreenCaptureKit).
 enum Speaker: String, Codable {
@@ -59,7 +59,7 @@ struct Meeting: Codable, Identifiable, Hashable {
         }.joined(separator: "\n")
     }
 
-    /// v1 has no per-speaker/per-segment editing UI — editing rewrites the transcript as a
+    /// v1 has no per-speaker/per-segment editing UI. Editing rewrites the transcript as a
     /// single blob and loses the original per-segment timestamps/speaker tags. Fine until phase 2
     /// adds real diarization, at which point this needs segment-aware editing.
     var editableTranscriptText: String {

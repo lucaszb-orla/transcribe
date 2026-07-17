@@ -6,7 +6,7 @@ private let logger = Logger(subsystem: "com.lucasbaggiotto.Transcribe", category
 
 /// Captures the microphone (your voice) by tapping the engine's input node directly.
 ///
-/// ponytail: no AVAudioEngine mixer / player-node graph and nothing is ever routed to an output —
+/// ponytail: no AVAudioEngine mixer / player-node graph and nothing is ever routed to an output.
 /// the old design tapped `mainMixerNode` while setting its `outputVolume = 0`, which silences the
 /// tapped signal too (that was the "transcrição não pega" bug). Tapping the input node gives the raw
 /// mic signal with no playback and no feedback risk. System audio is captured separately (see
