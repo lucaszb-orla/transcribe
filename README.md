@@ -62,9 +62,21 @@ resumo pelo `Summarizer` (`FoundationModels`); reuniões salvas como JSON local 
 
 ## 🧭 Roadmap
 
-- Diarização (quem falou o quê)
+- Diarização de verdade entre participantes remotos (hoje só separa "Você" de "Participantes")
 - Exportar PDF; enviar direto pra e-mail/Slack
 - Melhor vocabulário para nomes próprios e siglas
+
+## 🤖 Desenvolvido com Claude Code
+
+Este projeto é construído iterativamente com o [Claude Code](https://claude.com/claude-code).
+
+- **Spec viva do projeto**: o [`CLAUDE.md`](CLAUDE.md) funciona como a spec/contexto persistente —
+  stack, arquitetura, decisões já tomadas e gotchas conhecidos — atualizado a cada mudança relevante.
+  É o que o Claude Code lê antes de mexer em qualquer coisa, em vez de reconstruir contexto do zero
+  a cada sessão.
+- **Fluxo de trabalho**: cada fix ou feature vira um commit próprio, em vez de acumular várias
+  mudanças soltas num commit só. Tarefas novas rodam em uma `git worktree` separada por padrão, pra
+  não dar conflito de arquivo quando há mais de uma coisa em andamento ao mesmo tempo.
 
 ---
 
