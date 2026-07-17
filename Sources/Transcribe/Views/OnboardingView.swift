@@ -67,9 +67,7 @@ struct OnboardingView: View {
 
             Spacer(minLength: 12)
 
-            Image("OnboardingHero")
-                .resizable()
-                .scaledToFit()
+            heroArt
                 .frame(maxWidth: 250, maxHeight: 250)
                 .accessibilityHidden(true)
 
@@ -99,6 +97,18 @@ struct OnboardingView: View {
         .padding(.leading, 44)
         .padding(.trailing, 36)
         .padding(.vertical, 38)
+    }
+
+    /// The animated logo loops unless Reduce Motion is on, in which case a static frame is shown instead.
+    @ViewBuilder
+    private var heroArt: some View {
+        if !reduceMotion, let url = Bundle.main.url(forResource: "OnboardingHeroLoop", withExtension: "mp4") {
+            LoopingVideoView(url: url)
+        } else {
+            Image("OnboardingHero")
+                .resizable()
+                .scaledToFit()
+        }
     }
 
     private var stage: OnboardingStage {

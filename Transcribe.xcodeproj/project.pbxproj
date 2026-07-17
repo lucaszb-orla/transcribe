@@ -10,6 +10,7 @@
 		0601E56FB1A70616612E1A98 /* MeetingListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A685F7F5BA510E51768863C4 /* MeetingListView.swift */; };
 		18969BE10AB3A8FD314F7E9E /* Transcriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EB094440EC56682557B5D9 /* Transcriber.swift */; };
 		2421E83DB73237C9D0AD86E6 /* MeetingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2110331B49B783A39E9A3CB8 /* MeetingStore.swift */; };
+		2958E98D5F6B1B20203D62BE /* OnboardingHeroLoop.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 9568403501DBB7E311F1F121 /* OnboardingHeroLoop.mp4 */; };
 		2A1384CBCE6B6B831331654B /* OnboardingPermissionPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF19B579B74C48F61B77A4A /* OnboardingPermissionPanel.swift */; };
 		2E5C0030FE75F6392E2C7D56 /* CallLinkDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8646A7D11647B6100B6EE01 /* CallLinkDetector.swift */; };
 		3900E8D7EEEC8912B14F4836 /* SummaryPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D69A1935811A656C177589 /* SummaryPresets.swift */; };
@@ -26,6 +27,7 @@
 		85B5D351E886D41C0E8218AD /* MeetingExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 328B1C830BB08C870B0C1F30 /* MeetingExporter.swift */; };
 		8CF2DE3041A64B6DD0C6543F /* MeetingSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB1A8E36AA8C6A47846C635E /* MeetingSummary.swift */; };
 		9745299149072E243D1A7439 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1052142EC8ED61A73D15EE78 /* AppState.swift */; };
+		9A50F57DF9AFEA370A6343B3 /* LoopingVideoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17186FF951D2F992866C7937 /* LoopingVideoView.swift */; };
 		9B861A15AA31CC9BA5BDE815 /* MicrophoneCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC29C99BF592150DD66F8A6 /* MicrophoneCapture.swift */; };
 		A6466ED9DEC68E7D6C7D4107 /* PermissionPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB9C336BF0A5FCC815AE0DCF /* PermissionPolicyTests.swift */; };
 		C375B6CC4DB7D5AFF4436E37 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06CCF9BEAEABFF77B1156892 /* MenuBarView.swift */; };
@@ -54,6 +56,7 @@
 		0416E8F937C4ACCF68EF72A2 /* TranscribeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TranscribeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		06CCF9BEAEABFF77B1156892 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		1052142EC8ED61A73D15EE78 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		17186FF951D2F992866C7937 /* LoopingVideoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopingVideoView.swift; sourceTree = "<group>"; };
 		2110331B49B783A39E9A3CB8 /* MeetingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingStore.swift; sourceTree = "<group>"; };
 		328B1C830BB08C870B0C1F30 /* MeetingExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingExporter.swift; sourceTree = "<group>"; };
 		344DD95D7D8E76CFB90FE357 /* AudioDevices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDevices.swift; sourceTree = "<group>"; };
@@ -68,6 +71,7 @@
 		64DCF3BF5A013561B1842837 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		7B091EBDD6399870B8B4DD6C /* CMSampleBuffer+PCM.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CMSampleBuffer+PCM.swift"; sourceTree = "<group>"; };
 		93F55AFDD7822EBF1457958A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		9568403501DBB7E311F1F121 /* OnboardingHeroLoop.mp4 */ = {isa = PBXFileReference; path = OnboardingHeroLoop.mp4; sourceTree = "<group>"; };
 		9D48DBB76E0BF35A27FF2B72 /* Summarizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Summarizer.swift; sourceTree = "<group>"; };
 		A0D69A1935811A656C177589 /* SummaryPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryPresets.swift; sourceTree = "<group>"; };
 		A685F7F5BA510E51768863C4 /* MeetingListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingListView.swift; sourceTree = "<group>"; };
@@ -178,6 +182,7 @@
 			isa = PBXGroup;
 			children = (
 				C2CBCFF03C743AD3FEAF7CEC /* ConfirmationDialogs.swift */,
+				17186FF951D2F992866C7937 /* LoopingVideoView.swift */,
 				AB2A51506BBE8BC72261072A /* MeetingDetailView.swift */,
 				A685F7F5BA510E51768863C4 /* MeetingListView.swift */,
 				06CCF9BEAEABFF77B1156892 /* MenuBarView.swift */,
@@ -198,11 +203,20 @@
 				93F55AFDD7822EBF1457958A /* Info.plist */,
 				35D300C57CF5CD93A50DFD21 /* App */,
 				41B3AD1DCEB3B5F21B47839E /* Models */,
+				E3022E9D08928A584E144183 /* Resources */,
 				870ED3BB74D80AACBCACA1E7 /* Services */,
 				AE24239CCEC7D4833E8675E4 /* Storage */,
 				DF4A2198F11CFD39AB4D1D21 /* Views */,
 			);
 			path = Transcribe;
+			sourceTree = "<group>";
+		};
+		E3022E9D08928A584E144183 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				9568403501DBB7E311F1F121 /* OnboardingHeroLoop.mp4 */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -289,6 +303,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E725174DE2E37527D772E68C /* Assets.xcassets in Resources */,
+				2958E98D5F6B1B20203D62BE /* OnboardingHeroLoop.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -305,6 +320,7 @@
 				DCA4464EF68A847A6F2815F7 /* CalendarMonitor.swift in Sources */,
 				2E5C0030FE75F6392E2C7D56 /* CallLinkDetector.swift in Sources */,
 				7D03266FBC98528DD8178676 /* ConfirmationDialogs.swift in Sources */,
+				9A50F57DF9AFEA370A6343B3 /* LoopingVideoView.swift in Sources */,
 				78F01AE488073D43E90A6D9A /* Meeting.swift in Sources */,
 				CBD78366B7F3A34C72C5E38A /* MeetingDetailView.swift in Sources */,
 				85B5D351E886D41C0E8218AD /* MeetingExporter.swift in Sources */,
