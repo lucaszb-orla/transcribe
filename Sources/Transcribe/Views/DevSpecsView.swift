@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import TipKit
 
 /// A dedicated screen for turning a meeting into implementation tasks and handing them off to
 /// Claude Code — split out from `MeetingDetailView` so summarizing a meeting never implies also
@@ -17,6 +18,7 @@ struct DevSpecsView: View {
     @State private var recentlyOpenedSpecID: UUID?
     @State private var confirmingRun: ConfirmingRun?
     @State private var statuses: [UUID: ClaudeCodeRunner.DevSpecStatus] = [:]
+    private let runTip = DevSpecsRunTip()
 
     /// Running Claude Code autonomously (commit/push/PR) is consequential enough to confirm first —
     /// there's no in-app undo for it, the consequences land in the user's own repo/GitHub.
@@ -38,6 +40,7 @@ struct DevSpecsView: View {
                 optionsForm
                 if !meeting.devSpecsOrEmpty.isEmpty {
                     repoRow
+                    TipView(runTip)
                     runAllRow
                     ForEach(meeting.devSpecsOrEmpty) { spec in
                         devSpecCard(spec)

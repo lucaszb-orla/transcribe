@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import TipKit
 
 struct MeetingDetailView: View {
     @Environment(AppState.self) private var appState
@@ -24,6 +25,7 @@ struct MeetingDetailView: View {
     @State private var editingTranscript = false
 
     @State private var showingSpecs = false
+    private let specsTip = DevSpecsEntryTip()
 
     var body: some View {
         NavigationStack {
@@ -66,6 +68,7 @@ struct MeetingDetailView: View {
             Button("Specs de implementação", systemImage: "hammer") {
                 showingSpecs = true
             }
+            .popoverTip(specsTip)
         }
         ToolbarItem {
             Menu {
