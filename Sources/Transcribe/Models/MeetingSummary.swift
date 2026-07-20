@@ -5,7 +5,7 @@ struct SummaryOptions: Equatable, Hashable, Codable {
     enum Format: String, CaseIterable, Identifiable, Codable {
         case bullets, prose
         var id: String { rawValue }
-        var label: String { self == .bullets ? "Tópicos" : "Prosa" }
+        var label: String { self == .bullets ? String(localized: "Tópicos") : String(localized: "Prosa") }
     }
 
     var format: Format = .bullets

@@ -16,8 +16,8 @@ enum SpecProvider: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .appleIntelligence: "Apple Intelligence (on-device)"
-        case .claude: "Claude (nuvem)"
+        case .appleIntelligence: String(localized: "Apple Intelligence (on-device)")
+        case .claude: String(localized: "Claude (nuvem)")
         }
     }
 }
@@ -35,11 +35,11 @@ enum ClaudeEffort: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .low: "Baixo"
-        case .medium: "Médio"
-        case .high: "Alto"
-        case .xhigh: "Muito alto"
-        case .max: "Máximo"
+        case .low: String(localized: "Baixo")
+        case .medium: String(localized: "Médio")
+        case .high: String(localized: "Alto")
+        case .xhigh: String(localized: "Muito alto")
+        case .max: String(localized: "Máximo")
         }
     }
 }

@@ -7,6 +7,7 @@ struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.locale) private var locale
     @State private var devices: [AudioInputDevice] = []
     @State private var locales: [Locale] = []
     @State private var pendingPresetDelete: SummaryPreset?
@@ -72,7 +73,7 @@ struct SettingsView: View {
                 ))
                 if settings.autoExportEnabled {
                     HStack {
-                        Text(settings.autoExportFolderPath ?? "Nenhuma pasta escolhida")
+                        Text(settings.autoExportFolderPath ?? String(localized: "Nenhuma pasta escolhida"))
                             .foregroundStyle(settings.autoExportFolderPath == nil ? .secondary : .primary)
                             .lineLimit(1)
                             .truncationMode(.middle)
@@ -187,11 +188,10 @@ struct SettingsView: View {
         var ids = locales.map { $0.identifier(.bcp47) }
         let selected = appState.settings.transcriptionLocaleID
         if !ids.contains(selected) { ids.insert(selected, at: 0) }
-        let display = Locale(identifier: "pt_BR")
         return ids
             .sorted()
             .map { id in
-                (id: id, name: display.localizedString(forIdentifier: id) ?? id)
+                (id: id, name: locale.localizedString(forIdentifier: id) ?? id)
             }
     }
 }

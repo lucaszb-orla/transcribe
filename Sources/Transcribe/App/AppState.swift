@@ -99,7 +99,7 @@ final class AppState {
     private func ensurePermissions() -> Bool {
         permissions.refresh()
         guard permissions.requiredGranted else {
-            errorMessage = "Conceda acesso ao microfone, reconhecimento de fala e gravação de tela antes de gravar."
+            errorMessage = String(localized: "Conceda acesso ao microfone, reconhecimento de fala e gravação de tela antes de gravar.")
             return false
         }
         return true
@@ -117,7 +117,7 @@ final class AppState {
         // touching AppState.
         session.onSystemAudioError = { [weak self] error in
             Task { @MainActor in
-                self?.errorMessage = "O áudio do sistema parou de ser capturado: \(error.localizedDescription)"
+                self?.errorMessage = String(localized: "O áudio do sistema parou de ser capturado: \(error.localizedDescription)")
             }
         }
         recordingSession = session
@@ -127,7 +127,7 @@ final class AppState {
             return true
         } catch {
             logger.error("beginSession failed: \(String(describing: error), privacy: .public)")
-            errorMessage = "Não foi possível iniciar a gravação: \(error.localizedDescription)"
+            errorMessage = String(localized: "Não foi possível iniciar a gravação: \(error.localizedDescription)")
             recordingSession = nil
             mode = .standby
             return false
@@ -183,7 +183,7 @@ final class AppState {
                 maybeAutoExport(updated)
             } catch {
                 logger.error("failed to save continued meeting: \(String(describing: error), privacy: .public)")
-                errorMessage = "Não foi possível salvar a reunião continuada: \(error.localizedDescription)"
+                errorMessage = String(localized: "Não foi possível salvar a reunião continuada: \(error.localizedDescription)")
             }
             pendingReviewMeetingID = updated.id
             return
@@ -191,7 +191,7 @@ final class AppState {
 
         // Save the transcript immediately; summarization is now on-demand (the detail view asks the
         // user which format/options they want) so nothing is lost even if they never summarize.
-        let title = pendingSuggestion?.title ?? "Reunião de \(startedAt.formatted(date: .abbreviated, time: .shortened))"
+        let title = pendingSuggestion?.title ?? String(localized: "Reunião de \(startedAt.formatted(date: .abbreviated, time: .shortened))")
         let meeting = Meeting(
             title: title,
             startedAt: startedAt,
@@ -208,7 +208,7 @@ final class AppState {
             maybeAutoExport(meeting)
         } catch {
             logger.error("failed to save meeting: \(String(describing: error), privacy: .public)")
-            errorMessage = "Não foi possível salvar a reunião: \(error.localizedDescription)"
+            errorMessage = String(localized: "Não foi possível salvar a reunião: \(error.localizedDescription)")
         }
         pendingReviewMeetingID = meeting.id
         pendingSuggestion = nil
@@ -222,7 +222,7 @@ final class AppState {
         do {
             try MeetingExporter.autoSave(meeting, to: folder)
         } catch {
-            errorMessage = "A reunião foi salva, mas não deu pra copiar em Markdown para a pasta escolhida: \(error.localizedDescription)"
+            errorMessage = String(localized: "A reunião foi salva, mas não deu pra copiar em Markdown para a pasta escolhida: \(error.localizedDescription)")
         }
     }
 

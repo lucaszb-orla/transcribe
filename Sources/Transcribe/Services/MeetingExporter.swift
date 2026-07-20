@@ -22,25 +22,25 @@ enum MeetingExporter {
         out.append(dateLine(m))
 
         if !m.participants.isEmpty {
-            let label = md ? "**Participantes:** " : "Participantes: "
+            let label = md ? "**\(String(localized: "Participantes"))**: " : "\(String(localized: "Participantes")): "
             out.append(label + m.participants.joined(separator: ", "))
         }
 
         if let prose = m.summaryProse, !prose.isEmpty {
-            out.append(section("Resumo", body: prose, md: md))
+            out.append(section(String(localized: "Resumo"), body: prose, md: md))
         } else if !m.summaryBullets.isEmpty {
             let bullets = m.summaryBullets.map { "- \($0)" }.joined(separator: "\n")
-            out.append(section("Resumo", body: bullets, md: md))
+            out.append(section(String(localized: "Resumo"), body: bullets, md: md))
         }
 
         if !m.actionItems.isEmpty {
             let items = m.actionItems.map { md ? "- [ ] \($0)" : "- \($0)" }.joined(separator: "\n")
-            out.append(section("Itens de ação", body: items, md: md))
+            out.append(section(String(localized: "Itens de ação"), body: items, md: md))
         }
 
         let transcript = m.fullTranscriptText
         if !transcript.isEmpty {
-            out.append(section("Transcrição", body: transcript, md: md))
+            out.append(section(String(localized: "Transcrição"), body: transcript, md: md))
         }
 
         return out.joined(separator: "\n\n") + "\n"

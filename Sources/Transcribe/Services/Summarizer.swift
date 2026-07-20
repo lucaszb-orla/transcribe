@@ -13,22 +13,22 @@ enum Summarizer {
             case .modelUnavailable(let reason):
                 switch reason {
                 case .appleIntelligenceNotEnabled:
-                    return "O Apple Intelligence não está ativado. Ative em Ajustes do Sistema › Apple Intelligence e Siri para gerar resumos automáticos."
+                    return String(localized: "O Apple Intelligence não está ativado. Ative em Ajustes do Sistema › Apple Intelligence e Siri para gerar resumos automáticos.")
                 case .deviceNotEligible:
-                    return "Este Mac não é compatível com o Apple Intelligence, então o resumo automático fica indisponível."
+                    return String(localized: "Este Mac não é compatível com o Apple Intelligence, então o resumo automático fica indisponível.")
                 case .modelNotReady:
-                    return "O modelo do Apple Intelligence ainda está sendo baixado. Tente novamente em alguns minutos."
+                    return String(localized: "O modelo do Apple Intelligence ainda está sendo baixado. Tente novamente em alguns minutos.")
                 @unknown default:
-                    return "O resumo automático (Apple Intelligence) está indisponível no momento."
+                    return String(localized: "O resumo automático (Apple Intelligence) está indisponível no momento.")
                 }
             case .generationFailed(let error):
                 switch error {
                 case .exceededContextWindowSize:
-                    return "Essa reunião é longa demais para o modelo on-device processar de uma vez. Tente novamente em alguns instantes."
+                    return String(localized: "Essa reunião é longa demais para o modelo on-device processar de uma vez. Tente novamente em alguns instantes.")
                 case .guardrailViolation:
-                    return "O Apple Intelligence recusou processar esse conteúdo por segurança."
+                    return String(localized: "O Apple Intelligence recusou processar esse conteúdo por segurança.")
                 default:
-                    return "Não foi possível gerar isso com o Apple Intelligence: \(error.localizedDescription)"
+                    return String(localized: "Não foi possível gerar isso com o Apple Intelligence: \(error.localizedDescription)")
                 }
             }
         }

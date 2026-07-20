@@ -80,7 +80,7 @@ final class CalendarMonitor {
 
         let newSuggestion = MeetingSuggestion(
             id: event.eventIdentifier,
-            title: event.title ?? "Reunião sem título",
+            title: event.title ?? String(localized: "Reunião sem título"),
             start: event.startDate,
             end: event.endDate,
             participants: event.attendees?.compactMap(\.name) ?? [],

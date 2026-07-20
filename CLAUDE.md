@@ -1,8 +1,9 @@
 # Transcribe
 
 App nativo de macOS (menu bar + janela) que **transcreve reuniões on-device** e gera resumo/follow-up
-com IA local. Zero nuvem, zero dependências externas. Toda a UI e a saída de IA são em **português do
-Brasil (pt-BR)**.
+com IA local. Zero nuvem, zero dependências externas. A UI é localizável (pt-BR, en, es, fr; ver
+Localização); **a saída de IA continua sempre em português do Brasil (pt-BR)**, independente do idioma
+da interface (ver Localização).
 
 > **Exceção deliberada:** a feature de "Specs de implementação" (ver Arquitetura e Gotchas) sai desse
 > princípio de propósito, chamando o CLI real `claude` (e `gh`) para transformar itens de reunião em
@@ -78,10 +79,50 @@ open ~/Library/Developer/Xcode/DerivedData/Transcribe-*/Build/Products/Debug/Tra
 - Não usar travessão longo em textos da interface, documentação, comentários ou conteúdo exportado.
   Preferir ponto, vírgula, dois-pontos ou parênteses conforme o contexto.
 
+## Localização
+
+A UI usa **String Catalogs** (`Sources/Transcribe/Localizable.xcstrings` e `InfoPlist.xcstrings`), o
+mecanismo atual da Apple (substitui `Localizable.strings`/`.lproj` manuais). `pt-BR` é o idioma-fonte
+(`developmentLanguage: pt-BR` em `project.yml`); `en`, `es`, `fr` são traduzidos no catálogo.
+
+**O que é localizado:** todo o texto de UI (views, alerts, tips, nomes de seção do exportador de
+reunião) e as mensagens de erro mostradas ao usuário (`SummarizerError`, `ClaudeCodeRunner.RunnerError`,
+`AppState.errorMessage`).
+
+**O que fica sempre em pt-BR, de propósito:** os prompts que instruem o modelo (`Summarizer.swift`,
+`ClaudeCodeRunner.swift` — incluindo o script que roda o `claude` autônomo) e `Speaker.label`
+("Você"/"Participantes", usado tanto na UI quanto embutido no texto que vai pro modelo). Esses textos
+conversam com a IA sobre uma reunião em português, não são "chrome" de interface, então não seguem o
+idioma da UI. Ver a exceção deliberada no topo deste arquivo.
+
+**Como funciona a extração:** `Text("literal")` / `Button("literal")` / `Label("literal", ...)` etc.
+já são localizáveis de graça (SwiftUI trata o literal como `LocalizedStringKey`). Qualquer string que
+passa por uma propriedade/variável do tipo `String` antes de chegar na view (label de enum via
+`switch`, `errorMessage = "..."`, `A ?? "literal"` onde `A` não é literal) **não** é extraída
+automaticamente — precisa envolver o literal em `String(localized: "...")` no ponto onde ele aparece
+como literal de verdade (não no call site que só recebe a variável já resolvida).
+
+**Fluxo pra adicionar/atualizar strings** (a extração automática do Xcode só roda dentro do editor, não
+via `xcodebuild` puro — ver Gotchas):
+```sh
+xcodegen generate
+xcodebuild -project Transcribe.xcodeproj -scheme Transcribe -configuration Debug -allowProvisioningUpdates build
+STRDATA_DIR=$(xcodebuild -showBuildSettings -project Transcribe.xcodeproj -scheme Transcribe -configuration Debug \
+  | awk -F'= ' '/ PER_VARIANT_OBJECT_FILE_DIR /{print $2; exit}')/arm64
+args=(); for f in "$STRDATA_DIR"/*.stringsdata; do args+=(--stringsdata "$f"); done
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool sync Sources/Transcribe/Localizable.xcstrings "${args[@]}"
+```
+Isso atualiza as chaves em `Localizable.xcstrings` (novas entram como `"state": "new"`, sem tradução);
+traduza à mão pra `en`/`es`/`fr` editando o JSON. `InfoPlist.xcstrings` não é populado por esse fluxo
+(as strings de `Info.plist` não passam pelo compilador Swift); edite esse arquivo manualmente, chaveado
+pelo nome da chave do `Info.plist` (`NSMicrophoneUsageDescription` etc.), não pelo texto.
+
 ## Arquitetura
 
 ```
 Sources/Transcribe/
+  Localizable.xcstrings    # String Catalog da UI: pt-BR (fonte) + en/es/fr; ver Localização
+  InfoPlist.xcstrings      # String Catalog das strings do Info.plist (descrições de permissão)
   App/
     TranscribeApp.swift     # @main: MenuBarExtra + Window(RootView) + Settings(SettingsView); Tips.configure()
     AppState.swift          # @MainActor @Observable, estado central, orquestra tudo
@@ -153,6 +194,9 @@ disco** (por design). Nada de nuvem/sync.
 
 ## Feito até agora
 
+- **Localização da UI em pt-BR (fonte), inglês, espanhol e francês** via String Catalog; segue o
+  idioma do sistema automaticamente (sem seletor de idioma dentro do app). A saída de IA (resumos,
+  specs) continua sempre em pt-BR de propósito. Ver Localização.
 - Onboarding editorial com arte cromada e progresso 0/3...3/3; pede os três acessos essenciais em
   sequência e oferece Calendário como extra pulável.
 - Gravação: mic + áudio do sistema, **transcrição ao vivo**, **pause/retomar**, **medidor de nível** do
@@ -234,7 +278,28 @@ linguagem natural continua no campo **Instruções adicionais** do resumo, sem t
   inteira (`screencapture -x`) funciona sem essa permissão, mas rouba o foco de qualquer janela que o
   usuário esteja usando de verdade e pode capturar conteúdo alheio à tarefa (outras janelas, outra
   sessão) — evite ativar/focar janelas de outros apps à toa, principalmente com o usuário ativo na
-  máquina.
+  máquina. Também retorna uma imagem inteiramente preta se a tela estiver bloqueada/em suspensão —
+  nesse caso não adianta repetir a captura, é preciso esperar o usuário desbloquear.
+- **`SWIFT_EMIT_LOC_STRINGS` não vem `YES` por padrão num projeto gerado pelo XcodeGen.** É o build
+  setting que faz o compilador Swift emitir `.stringsdata` (usado pra popular o String Catalog); o
+  Xcode liga isso sozinho quando você adiciona um catálogo pela UI, mas o XcodeGen só aplica o que está
+  em `project.yml` — sem essa flag explícita, `Localizable.xcstrings` builda mas nunca ganha chaves
+  novas, silenciosamente.
+- **A extração automática de strings pro String Catalog só roda dentro do Xcode.app, não no
+  `xcodebuild` puro.** O `swiftc` com `SWIFT_EMIT_LOC_STRINGS: YES` gera os `.stringsdata`
+  normalmente, mas o passo que funde isso de volta no `.xcstrings` é uma feature só da IDE. Pra fazer
+  esse fluxo funcionar via linha de comando (obrigatório pra um agente que não abre o Xcode.app), use
+  `xcstringstool sync` (`/Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool`) apontando
+  pros `.stringsdata` gerados — ver Localização.
+- **`.environment(\.locale, ...)` fixo em qualquer `Scene`/view sobrepõe o idioma do sistema pra toda a
+  árvore, inclusive a resolução de `Text(LocalizedStringKey)`.** O app tinha um
+  `.environment(\.locale, Locale(identifier: "pt_BR"))` fixo em `TranscribeApp.swift` (adicionado só
+  pra formatar datas em português mesmo com o Mac em inglês, antes de existir localização de verdade).
+  Isso fazia CADA string traduzida no String Catalog ser ignorada silenciosamente: a UI continuava saindo
+  em pt-BR não importa o idioma do sistema, porque o `\.locale` do ambiente é exatamente o que o SwiftUI
+  usa pra escolher a tradução (é o mesmo mecanismo do `.environment(\.locale, .init(identifier: "fr"))`
+  usado pra pré-visualizar outro idioma no Xcode Previews). Foi removido: agora data/número E texto
+  seguem o idioma do sistema de forma consistente, sem esse hack.
 
 ## Próximos passos possíveis
 

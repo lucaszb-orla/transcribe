@@ -143,7 +143,7 @@ struct DevSpecsView: View {
     /// One repo path shared by every spec in this meeting — pick it once here instead of per card.
     private var repoRow: some View {
         HStack {
-            Text(repoPath ?? "Nenhum repositório escolhido")
+            Text(repoPath ?? String(localized: "Nenhum repositório escolhido"))
                 .font(.callout)
                 .foregroundStyle(repoPath == nil ? .secondary : .primary)
                 .lineLimit(1)
@@ -293,8 +293,8 @@ struct DevSpecsView: View {
 
     private var confirmingRunTitle: String {
         switch confirmingRun {
-        case .all(let count): return count == 1 ? "Rodar automação?" : "Rodar \(count) automações?"
-        case .one, .none: return "Rodar automação?"
+        case .all(let count): return count == 1 ? String(localized: "Rodar automação?") : String(localized: "Rodar \(count) automações?")
+        case .one, .none: return String(localized: "Rodar automação?")
         }
     }
 
@@ -302,10 +302,10 @@ struct DevSpecsView: View {
         let repo = repoPath ?? ""
         let windows: String
         switch run {
-        case .all(let count): windows = count == 1 ? "um Terminal" : "\(count) Terminais"
-        case .one: windows = "um Terminal"
+        case .all(let count): windows = count == 1 ? String(localized: "um Terminal") : String(localized: "\(count) Terminais")
+        case .one: windows = String(localized: "um Terminal")
         }
-        return "Isso vai abrir \(windows) e deixar o Claude Code implementar, commitar, dar push e abrir Pull Request sozinho em \u{201c}\(repo)\u{201d}."
+        return String(localized: "Isso vai abrir \(windows) e deixar o Claude Code implementar, commitar, dar push e abrir Pull Request sozinho em \u{201c}\(repo)\u{201d}.")
     }
 
     private func confirm(_ run: ConfirmingRun) {

@@ -150,21 +150,21 @@ struct OnboardingView: View {
     private var primaryTitle: String {
         switch stage {
         case .microphone, .speechRecognition, .screenRecording:
-            activeStatus == .denied ? "Abrir Ajustes" : "Permitir"
+            activeStatus == .denied ? String(localized: "Abrir Ajustes") : String(localized: "Permitir")
         case .calendar:
             switch activeStatus {
-            case .granted: "Continuar"
-            case .denied: "Abrir Ajustes"
-            case .notDetermined: "Conectar Calendário"
+            case .granted: String(localized: "Continuar")
+            case .denied: String(localized: "Abrir Ajustes")
+            case .notDetermined: String(localized: "Conectar Calendário")
             }
-        case .complete: "Ver minhas reuniões"
+        case .complete: String(localized: "Ver minhas reuniões")
         }
     }
 
     private var secondaryTitle: String? {
         switch stage {
-        case .screenRecording where activeStatus == .denied: "Reiniciar o Transcribe"
-        case .calendar: "Agora não"
+        case .screenRecording where activeStatus == .denied: String(localized: "Reiniciar o Transcribe")
+        case .calendar: String(localized: "Agora não")
         default: nil
         }
     }

@@ -4,6 +4,7 @@ options:
   deploymentTarget:
     macOS: "26.0"
   createIntermediateGroups: true
+  developmentLanguage: pt-BR
 settings:
   base:
     SWIFT_VERSION: "5"
@@ -11,6 +12,7 @@ settings:
     ENABLE_HARDENED_RUNTIME: NO
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 7QTC8MU95P
+    SWIFT_EMIT_LOC_STRINGS: YES
 targets:
   Transcribe:
     type: application

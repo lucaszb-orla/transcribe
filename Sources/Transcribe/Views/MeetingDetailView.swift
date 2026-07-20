@@ -50,7 +50,7 @@ struct MeetingDetailView: View {
                     try appState.store.delete(meeting)
                     onDelete()
                 } catch {
-                    appState.errorMessage = "Não foi possível excluir a reunião: \(error.localizedDescription)"
+                    appState.errorMessage = String(localized: "Não foi possível excluir a reunião: \(error.localizedDescription)")
                 }
             }
         }
@@ -340,7 +340,7 @@ struct MeetingDetailView: View {
         do {
             try appState.store.save(meeting)
         } catch {
-            appState.errorMessage = "Não foi possível salvar a reunião: \(error.localizedDescription)"
+            appState.errorMessage = String(localized: "Não foi possível salvar a reunião: \(error.localizedDescription)")
         }
     }
 

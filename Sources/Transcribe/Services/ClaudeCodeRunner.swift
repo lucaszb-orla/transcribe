@@ -25,13 +25,13 @@ enum ClaudeCodeRunner {
         var errorDescription: String? {
             switch self {
             case .repoNotFound:
-                return "A pasta escolhida não existe mais ou não é um repositório git válido."
+                return String(localized: "A pasta escolhida não existe mais ou não é um repositório git válido.")
             case .repoDirty:
-                return "O repositório tem alterações não commitadas. Faça commit ou stash antes de rodar a automação."
+                return String(localized: "O repositório tem alterações não commitadas. Faça commit ou stash antes de rodar a automação.")
             case .toolNotFound(let tool):
-                return "Não encontrei o `\(tool)` no PATH deste Mac. Confirme que está instalado e autenticado, e tente de novo."
+                return String(localized: "Não encontrei o `\(tool)` no PATH deste Mac. Confirme que está instalado e autenticado, e tente de novo.")
             case .invalidGeneration(let text):
-                return "O Claude não devolveu uma lista de specs válida. Resposta recebida: \(text.prefix(200))"
+                return String(localized: "O Claude não devolveu uma lista de specs válida. Resposta recebida: \(text.prefix(200))")
             }
         }
     }

@@ -145,7 +145,7 @@ struct MeetingListView: View {
         do {
             try appState.store.delete(meeting)
         } catch {
-            appState.errorMessage = "Não foi possível excluir a reunião: \(error.localizedDescription)"
+            appState.errorMessage = String(localized: "Não foi possível excluir a reunião: \(error.localizedDescription)")
         }
     }
 

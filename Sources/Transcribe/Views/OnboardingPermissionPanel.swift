@@ -9,29 +9,29 @@ enum OnboardingStage: Int, Hashable {
 
     var eyebrow: String {
         switch self {
-        case .microphone, .speechRecognition, .screenRecording: "ACESSOS ESSENCIAIS"
-        case .calendar: "1 EXTRA, SE VOCÊ QUISER"
-        case .complete: "TUDO PRONTO"
+        case .microphone, .speechRecognition, .screenRecording: String(localized: "ACESSOS ESSENCIAIS")
+        case .calendar: String(localized: "1 EXTRA, SE VOCÊ QUISER")
+        case .complete: String(localized: "TUDO PRONTO")
         }
     }
 
     var title: String {
         switch self {
-        case .microphone: "Primeiro, seu microfone"
-        case .speechRecognition: "Agora, reconhecer sua fala"
-        case .screenRecording: "E o áudio dos participantes"
-        case .calendar: "Quer conectar o Calendário?"
-        case .complete: "Tudo pronto."
+        case .microphone: String(localized: "Primeiro, seu microfone")
+        case .speechRecognition: String(localized: "Agora, reconhecer sua fala")
+        case .screenRecording: String(localized: "E o áudio dos participantes")
+        case .calendar: String(localized: "Quer conectar o Calendário?")
+        case .complete: String(localized: "Tudo pronto.")
         }
     }
 
     var detail: String {
         switch self {
-        case .microphone: "Captura o que você diz durante a reunião. O áudio é processado no próprio Mac."
-        case .speechRecognition: "Transforma as falas em texto ao vivo usando o reconhecimento on-device da Apple."
-        case .screenRecording: "O macOS exige Gravação de Tela para capturar somente o áudio do sistema. Nenhum vídeo é salvo."
-        case .calendar: "O Transcribe pode avisar quando uma reunião com link estiver começando. Você também pode ativar isso depois."
-        case .complete: "As permissões essenciais estão ativas. Você já pode começar sua primeira transcrição."
+        case .microphone: String(localized: "Captura o que você diz durante a reunião. O áudio é processado no próprio Mac.")
+        case .speechRecognition: String(localized: "Transforma as falas em texto ao vivo usando o reconhecimento on-device da Apple.")
+        case .screenRecording: String(localized: "O macOS exige Gravação de Tela para capturar somente o áudio do sistema. Nenhum vídeo é salvo.")
+        case .calendar: String(localized: "O Transcribe pode avisar quando uma reunião com link estiver começando. Você também pode ativar isso depois.")
+        case .complete: String(localized: "As permissões essenciais estão ativas. Você já pode começar sua primeira transcrição.")
         }
     }
 

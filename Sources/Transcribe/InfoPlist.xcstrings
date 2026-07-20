@@ -1,0 +1,93 @@
+{
+  "sourceLanguage" : "pt-BR",
+  "strings" : {
+    "NSCalendarsFullAccessUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transcribe reads your Calendar to suggest starting a recording when a meeting with a call link is about to begin."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transcribe lee tu Calendario para sugerir el inicio de la grabación cuando una reunión con enlace de llamada está por comenzar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transcribe lit votre Calendrier pour suggérer le démarrage d’un enregistrement quand une réunion avec un lien d’appel est sur le point de commencer."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transcribe lê seu Calendário para sugerir o início da gravação quando uma reunião com link de chamada está prestes a começar."
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transcribe needs the microphone to record your speech during meetings."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transcribe necesita el micrófono para grabar tu voz durante las reuniones."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transcribe a besoin du microphone pour enregistrer votre voix pendant les réunions."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transcribe precisa do microfone para gravar sua fala durante as reuniões."
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transcribe uses on-device speech recognition to transcribe your meetings."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transcribe usa reconocimiento de voz en el dispositivo para transcribir tus reuniones."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transcribe utilise la reconnaissance vocale sur l’appareil pour transcrire vos réunions."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transcribe usa reconhecimento de fala on-device para transcrever suas reuniões."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
