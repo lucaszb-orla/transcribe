@@ -46,6 +46,7 @@
 		E725174DE2E37527D772E68C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D26FFC1863524AFAC3F4C04B /* Assets.xcassets */; };
 		F1739070C90111900A73D835 /* TranscriptBubbles.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADBC8B16BA9DD5690D2A0A92 /* TranscriptBubbles.swift */; };
 		F6F23B79CF3389C543937164 /* DevSpecsTips.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2D01B87F01D7B77266D1714 /* DevSpecsTips.swift */; };
+		FB19DF90BA400BB6ECEFF92C /* SummarizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20BB97011516746BE543477 /* SummarizerTests.swift */; };
 		FB5E38D67E0A9AC3456B2ADB /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64DCF3BF5A013561B1842837 /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
@@ -87,6 +88,7 @@
 		9D48DBB76E0BF35A27FF2B72 /* Summarizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Summarizer.swift; sourceTree = "<group>"; };
 		9F3A5055F859670B474A817C /* DevSpecOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevSpecOptions.swift; sourceTree = "<group>"; };
 		A0D69A1935811A656C177589 /* SummaryPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryPresets.swift; sourceTree = "<group>"; };
+		A20BB97011516746BE543477 /* SummarizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummarizerTests.swift; sourceTree = "<group>"; };
 		A685F7F5BA510E51768863C4 /* MeetingListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingListView.swift; sourceTree = "<group>"; };
 		AAF19B579B74C48F61B77A4A /* OnboardingPermissionPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPermissionPanel.swift; sourceTree = "<group>"; };
 		AB2A51506BBE8BC72261072A /* MeetingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingDetailView.swift; sourceTree = "<group>"; };
@@ -141,6 +143,7 @@
 				BD738AD36CCD64B8522BDEA5 /* CallLinkDetectorTests.swift */,
 				EC885558B9CD7EA837E906BE /* ClaudeCodeRunnerTests.swift */,
 				AB9C336BF0A5FCC815AE0DCF /* PermissionPolicyTests.swift */,
+				A20BB97011516746BE543477 /* SummarizerTests.swift */,
 			);
 			path = TranscribeTests;
 			sourceTree = "<group>";
@@ -383,6 +386,7 @@
 				C3E24234EE07E3063587AEF7 /* CallLinkDetectorTests.swift in Sources */,
 				D67E4AD60A05135E2AFDC89C /* ClaudeCodeRunnerTests.swift in Sources */,
 				A6466ED9DEC68E7D6C7D4107 /* PermissionPolicyTests.swift in Sources */,
+				FB19DF90BA400BB6ECEFF92C /* SummarizerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

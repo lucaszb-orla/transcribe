@@ -46,11 +46,29 @@ enum Summarizer {
         }
     }
 
+    /// Long meetings (~30min+) can exceed the on-device model's small context window on their own,
+    /// same as `generateDevSpecs` below. Unlike specs (independent items, safe to just concatenate
+    /// across chunks), a summary needs to read as one coherent whole — so a long transcript gets a
+    /// first pass per chunk (bullets, a compact intermediate form regardless of the final requested
+    /// format), then a second pass merges those much-shorter partial summaries into the single
+    /// title/bullets-or-prose/action-items the caller asked for. Short meetings skip all of this and
+    /// go through the model once, same as before.
+    // ponytail: merges in a single pass; an extremely long meeting whose partial summaries alone
+    // still overflow the context window would need a second merge level (not yet seen in practice).
     static func summarize(transcript: String, calendarContext: String?, options: SummaryOptions) async throws -> SummaryResult {
-        let session = try makeSession { instructions(options) }
+        let chunks = chunkedForContext(transcript)
+        let sourceText: String
+        if chunks.count == 1 {
+            sourceText = "Transcrição da reunião:\n\(transcript)"
+        } else {
+            sourceText = try await mergeableSummaries(chunks: chunks, calendarContext: calendarContext, options: options)
+        }
 
-        var prompt = "Transcrição da reunião:\n\(transcript)"
-        if let calendarContext, !calendarContext.isEmpty {
+        let session = try makeSession {
+            chunks.count == 1 ? instructions(options) : instructions(options, task: mergeTask)
+        }
+        var prompt = sourceText
+        if chunks.count == 1, let calendarContext, !calendarContext.isEmpty {
             prompt = "Contexto do evento de calendário: \(calendarContext)\n\n\(prompt)"
         }
 
@@ -73,6 +91,32 @@ enum Summarizer {
             )
         }
     }
+
+    /// First pass of the long-meeting path: bullet-summarizes each chunk independently, then hands
+    /// back the concatenation as the "source text" for the merge pass in `summarize`.
+    private static func mergeableSummaries(chunks: [String], calendarContext: String?, options: SummaryOptions) async throws -> String {
+        var bulletOptions = options
+        bulletOptions.format = .bullets
+        var partials: [String] = []
+        for (index, chunk) in chunks.enumerated() {
+            let session = try makeSession { instructions(bulletOptions) }
+            var prompt = "Transcrição da reunião (trecho \(index + 1) de \(chunks.count)):\n\(chunk)"
+            if index == 0, let calendarContext, !calendarContext.isEmpty {
+                prompt = "Contexto do evento de calendário: \(calendarContext)\n\n\(prompt)"
+            }
+            let r = try await respond(session, to: prompt, generating: GeneratedBulletSummary.self)
+            var lines = ["Trecho \(index + 1) de \(chunks.count). Título: \(r.title)"]
+            lines.append(contentsOf: r.bullets.map { "- \($0)" })
+            if !r.actionItems.isEmpty {
+                lines.append("Ações:")
+                lines.append(contentsOf: r.actionItems.map { "- \($0)" })
+            }
+            partials.append(lines.joined(separator: "\n"))
+        }
+        return "Resumos parciais da mesma reunião, em ordem:\n\n" + partials.joined(separator: "\n\n")
+    }
+
+    private static let mergeTask = "Você recebe resumos parciais de diferentes trechos de uma mesma reunião de trabalho em português do Brasil, na ordem em que ocorreram, e sintetiza um único resumo coerente da reunião inteira, sem repetir pontos que apareçam em mais de um trecho e sem inventar informação que não esteja nos resumos parciais."
 
     /// Splits a meeting transcript into distinct implementation tasks (title + short description).
     /// Deliberately lightweight: the on-device model just separates the meeting into distinct asks,
@@ -103,7 +147,9 @@ enum Summarizer {
     /// (`SystemLanguageModel.contextSize`, ~4096 tokens). There's no synchronous tokenizer exposed,
     /// so this uses a conservative ~4 chars/token estimate and reserves half the window for
     /// instructions + expected output, splitting only on whole transcript lines.
-    private static func chunkedForContext(_ transcript: String) -> [String] {
+    // internal (not private) so `SummarizerTests` can exercise it directly via `@testable import`,
+    // without needing Apple Intelligence available to actually call the model.
+    static func chunkedForContext(_ transcript: String) -> [String] {
         let maxChars = max(2000, (SystemLanguageModel.default.contextSize / 2) * 4)
         guard transcript.count > maxChars else { return [transcript] }
 
@@ -146,10 +192,11 @@ enum Summarizer {
         return lines.joined(separator: " ")
     }
 
-    private static func instructions(_ options: SummaryOptions) -> String {
-        var lines = [
-            "Você resume transcrições de reuniões de trabalho em português do Brasil, de forma objetiva e sem inventar informação que não está no texto."
-        ]
+    private static func instructions(
+        _ options: SummaryOptions,
+        task: String = "Você resume transcrições de reuniões de trabalho em português do Brasil, de forma objetiva e sem inventar informação que não está no texto."
+    ) -> String {
+        var lines = [task]
         lines.append(options.format == .bullets
             ? "Escreva o resumo como tópicos curtos."
             : "Escreva o resumo como prosa corrida.")
