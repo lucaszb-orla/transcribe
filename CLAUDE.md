@@ -197,6 +197,17 @@ linguagem natural continua no campo **Instruções adicionais** do resumo, sem t
   no `inputNode`, sem rota de saída: sem playback, sem eco, sem gravar em disco.
 - **Idioma:** `Locale.current` transcrevia em inglês. Agora o idioma vem de `AppSettings` (padrão `pt-BR`,
   que é suportado e já vem instalado neste Mac).
+- **`SpeechAnalyzer.finalizeAndFinishThroughEndOfInput()` não tem limite de tempo documentado.** Numa
+  reunião de 1h+ isso já travou de verdade: o app fica parado pra sempre em "Encerrar" esperando esse
+  `await` retornar, e como o `store.save()` só roda depois disso, a transcrição inteira (que já estava
+  toda em `Transcriber.segments`, capturada ao vivo durante a gravação) nunca chega a ser salva —
+  mesmo não tendo se perdido de verdade, fica presa atrás de uma espera sem fim. `Transcriber.finish()`
+  agora corre essa chamada contra um timeout de 15s (`Transcriber.withTimeout`, ver Tests/TranscriberTests):
+  não dá pra usar `withTaskGroup` pra isso porque ele sempre espera todos os filhos terminarem antes de
+  retornar, cancelamento ou não (cancelamento é cooperativo, não preemptivo) — por isso o timeout usa
+  duas `Task {}` soltas (não estruturadas) competindo por uma `CheckedContinuation`, e simplesmente
+  ignora a que ficou pra trás. Se isso disparar (log `.error` avisando), o pior caso é perder só os
+  últimos segundos ainda não finalizados, nunca a reunião inteira.
 - **FoundationModels exige Apple Intelligence ativado**: se não estiver, resumo/follow-up lançam erro
   legível (`appleIntelligenceNotEnabled`) sem quebrar a transcrição.
 - **DerivedData com hash duplicado:** ver "Build & Run". Sempre confirme o `BUILT_PRODUCTS_DIR` via

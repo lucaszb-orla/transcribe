@@ -113,13 +113,61 @@ final class Transcriber {
     }
 
     /// Stops feeding audio, waits for the recognizer to flush, and returns the final transcript.
+    ///
+    /// `finalizeAndFinishThroughEndOfInput()` has no documented time bound, and on a long (~1h+)
+    /// meeting a stuck finalize used to freeze the whole app on "Encerrar" forever — with nothing
+    /// to show for it, even though everything said up to that point was already sitting in
+    /// `segments`. Race it against a timeout instead: if it doesn't wrap up promptly, give up on
+    /// waiting and return what's already been transcribed rather than hang indefinitely. The slow
+    /// call keeps running in the background and is simply ignored once we've moved on.
     func finish() async -> [TranscriptSegment] {
         inputBuilder?.finish()
-        try? await analyzer?.finalizeAndFinishThroughEndOfInput()
-        // Wait for the results loop to drain rather than cancelling it, so the last finalized
-        // segment (still hopping onto @MainActor when finalize completes) isn't dropped.
-        await resultsTask?.value
+        let finishedInTime = await Self.withTimeout(seconds: 15) { [weak self] in
+            try? await self?.analyzer?.finalizeAndFinishThroughEndOfInput()
+            // Wait for the results loop to drain rather than cancelling it, so the last finalized
+            // segment (still hopping onto @MainActor when finalize completes) isn't dropped.
+            await self?.resultsTask?.value
+        }
+        if !finishedInTime {
+            logger.error("\(self.speaker.label, privacy: .public) transcriber finalize timed out after 15s; returning \(self.segments.count, privacy: .public) segments captured so far")
+        }
         return segments
+    }
+
+    /// Runs `operation` unstructured (not as a task-group child) so a timeout can truly abandon it
+    /// instead of blocking on it anyway — Swift's structured concurrency always awaits every child
+    /// task before returning, timeout or not, which would defeat the whole point here.
+    // internal (not private) so `TranscriberTests` can exercise the race directly via `@testable import`.
+    static func withTimeout(seconds: TimeInterval, operation: @escaping @Sendable () async -> Void) async -> Bool {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+            let box = ResumeOnce(continuation)
+            Task {
+                await operation()
+                box.resume(with: true)
+            }
+            Task {
+                try? await Task.sleep(for: .seconds(seconds))
+                box.resume(with: false)
+            }
+        }
+    }
+
+    /// Guards a `CheckedContinuation` so only the first of the two racing tasks above resumes it.
+    private final class ResumeOnce: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<Bool, Never>?
+
+        init(_ continuation: CheckedContinuation<Bool, Never>) {
+            self.continuation = continuation
+        }
+
+        func resume(with value: Bool) {
+            lock.lock()
+            defer { lock.unlock() }
+            guard let continuation else { return }
+            self.continuation = nil
+            continuation.resume(returning: value)
+        }
     }
 
     @MainActor
