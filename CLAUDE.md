@@ -218,9 +218,16 @@ linguagem natural continua no campo **Instruções adicionais** do resumo, sem t
   do `ClaudeCodeRunner`, que rodava o `claude` em background dentro do próprio app). Use
   `FileHandle.nullDevice` quando não for consumir o stream, ou drene ativamente.
 - **`SystemLanguageModel.contextSize` é pequeno (~4096 tokens).** Uma reunião de ~30min sozinha já pode
-  estourar isso, antes mesmo de contar instruções/saída. Quem gera specs on-device precisa quebrar a
-  transcrição em pedaços; trate `LanguageModelSession.GenerationError.exceededContextWindowSize` com
-  mensagem própria, não deixe o erro cru do framework vazar pra UI.
+  estourar isso, antes mesmo de contar instruções/saída. Quem gera specs ou resumo on-device precisa
+  quebrar a transcrição em pedaços (`Summarizer.chunkedForContext`); trate
+  `LanguageModelSession.GenerationError.exceededContextWindowSize` com mensagem própria, não deixe o
+  erro cru do framework vazar pra UI. **`generateDevSpecs` já quebrava a transcrição desde o início,
+  mas `summarize` (o botão "Resumo") não quebrava** — reunião de 1h+ batia direto no limite e só
+  devolvia esse erro, sem alternativa real ("tente de novo" não ajuda, a transcrição não fica menor.
+  `summarize` agora resume cada pedaço em tópicos primeiro (formato compacto, independente do formato
+  final pedido) e faz uma segunda passada só pra sintetizar esses resumos parciais (bem mais curtos que
+  a transcrição original) num resumo único, no formato que o usuário escolheu. Reuniões curtas (cabem
+  num pedaço só) continuam indo direto, sem essa segunda passada.
 - **App GUI não herda o PATH do shell do usuário.** Rodar `git`/`gh`/`claude` a partir do próprio
   processo do app (não de um Terminal) exige resolver o binário via shell de login
   (`/bin/zsh -l -c "command -v X"`) primeiro. É por isso que `ClaudeCodeRunner` abre um Terminal de
