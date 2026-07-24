@@ -120,6 +120,11 @@ final class AppState {
                 self?.errorMessage = String(localized: "O áudio do sistema parou de ser capturado: \(error.localizedDescription)")
             }
         }
+        session.onMicrophoneError = { [weak self] error in
+            Task { @MainActor in
+                self?.errorMessage = String(localized: "O microfone parou de ser capturado: \(error.localizedDescription)")
+            }
+        }
         recordingSession = session
         do {
             try await session.start(inputDeviceID: settings.resolvedInputDeviceID, locale: settings.transcriptionLocale)

@@ -31,6 +31,9 @@ final class RecordingSession {
     /// permission revoked, display disconnected). Mic audio keeps being transcribed either way,
     /// but the caller should surface this since the other participants' audio is now missing.
     var onSystemAudioError: ((Error) -> Void)?
+    /// Called when the microphone cannot resume after the audio hardware configuration changes.
+    /// System audio keeps being transcribed, but the user's voice is no longer available.
+    var onMicrophoneError: ((Error) -> Void)?
 
     /// Skips feeding audio to the recognizer while paused (both capturers keep running).
     private var paused = false
@@ -64,12 +67,14 @@ final class RecordingSession {
 
         logger.debug("starting mic capture…")
         do {
-            try mic.start(deviceID: inputDeviceID) { [weak self] buffer in
+            try mic.start(deviceID: inputDeviceID, onBuffer: { [weak self] buffer in
                 guard let self, !self.paused else { return }
                 let level = buffer.meterLevel
                 DispatchQueue.main.async { self.micLevel = level }
                 self.micTranscriber.ingest(buffer)
-            }
+            }, onError: { [weak self] error in
+                self?.onMicrophoneError?(error)
+            })
         } catch {
             _ = await micTranscriber.finish()
             _ = await systemTranscriber.finish()

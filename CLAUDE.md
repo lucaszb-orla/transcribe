@@ -163,7 +163,7 @@ Sources/Transcribe/
     SettingsView.swift      # ⌘,: microfone, idioma, salvamento automático, rever onboarding
     MenuBarView.swift       # controles rápidos na barra de menu
     ConfirmationDialogs.swift # diálogos compartilhados de confirmação (encerrar gravação, apagar)
-Tests/TranscribeTests/      # CallLinkDetectorTests + PermissionPolicyTests + ClaudeCodeRunnerTests
+Tests/TranscribeTests/      # testes de links, permissões, Claude Code, transcriber, resumo e recuperação do mic
 ```
 
 **Fluxo:** Standby (monitorando calendário somente quando conectado) ↔ Meeting (gravando). Ao
@@ -239,6 +239,13 @@ linguagem natural continua no campo **Instruções adicionais** do resumo, sem t
 - **`AVAudioEngine` mixer + `outputVolume = 0`:** se você fizer tap no `mainMixerNode` e zerar o volume,
   o tap recebe **silêncio** (era o bug "transcrição não pega"). Por isso o mic é capturado com tap direto
   no `inputNode`, sem rota de saída: sem playback, sem eco, sem gravar em disco.
+- **Mudança de hardware para o `AVAudioEngine`:** Teams, fones, iPhone ou outra rota podem mudar o
+  sample rate ou a quantidade de canais durante uma reunião. Nessa situação, o macOS para e
+  desinicializa a engine e publica `AVAudioEngineConfigurationChange`. Sem observar essa notificação,
+  o tap do microfone morre em silêncio enquanto o áudio do sistema continua normal. O
+  `MicrophoneCapture` agora agenda a recuperação numa fila serial, recria a engine e o tap fora do
+  callback da notificação e usa o microfone padrão como fallback se o dispositivo escolhido sumir.
+  Não destrua a engine dentro do callback da Apple, pois isso pode causar deadlock.
 - **Idioma:** `Locale.current` transcrevia em inglês. Agora o idioma vem de `AppSettings` (padrão `pt-BR`,
   que é suportado e já vem instalado neste Mac).
 - **`SpeechAnalyzer.finalizeAndFinishThroughEndOfInput()` não tem limite de tempo documentado.** Numa

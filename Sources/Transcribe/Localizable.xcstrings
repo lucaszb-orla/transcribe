@@ -2609,6 +2609,50 @@
         }
       }
     },
+    "O microfone parou de ser capturado: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone capture stopped: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La captura del micrófono se detuvo: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La capture du microphone s’est arrêtée : %@"
+          }
+        }
+      }
+    },
+    "O microfone selecionado não está disponível.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected microphone is unavailable."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El micrófono seleccionado no está disponible."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le microphone sélectionné n’est pas disponible."
+          }
+        }
+      }
+    },
     "O modelo do Apple Intelligence ainda está sendo baixado. Tente novamente em alguns minutos.": {
       "localizations": {
         "en": {
