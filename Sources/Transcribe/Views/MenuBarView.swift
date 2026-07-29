@@ -5,7 +5,6 @@ struct MenuBarView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.openWindow) private var openWindow
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var confirmEnd = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -48,9 +47,6 @@ struct MenuBarView: View {
         .animation(.smooth, value: appState.suggestion)
         .animation(.smooth, value: appState.mode)
         .animation(.smooth, value: appState.isPaused)
-        .endMeetingConfirmation(isPresented: $confirmEnd) {
-            Task { await appState.endMeeting() }
-        }
     }
 
     private var statusHeader: some View {
@@ -113,7 +109,9 @@ struct MenuBarView: View {
                 .buttonStyle(.borderedProminent)
             }
             Button("Encerrar transcrição", systemImage: "stop.circle") {
-                confirmEnd = true
+                MenuBarConfirmation.confirmEndMeeting {
+                    Task { await appState.endMeeting() }
+                }
             }
             .tint(.red)
         } else if appState.suggestion == nil {

@@ -62,8 +62,12 @@ final class RecordingSession {
         startedAt = Date()
 
         logger.debug("starting transcribers…")
-        try await micTranscriber.start(locale: locale)
-        try await systemTranscriber.start(locale: locale)
+        // Each `Transcriber.start()` does its own asset-check + SpeechAnalyzer setup; running them
+        // concurrently instead of one after another roughly halves the wait before recording begins.
+        async let micReady: Void = micTranscriber.start(locale: locale)
+        async let systemReady: Void = systemTranscriber.start(locale: locale)
+        try await micReady
+        try await systemReady
 
         logger.debug("starting mic capture…")
         do {

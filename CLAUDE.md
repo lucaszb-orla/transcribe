@@ -316,6 +316,16 @@ linguagem natural continua no campo **Instruções adicionais** do resumo, sem t
   esse fluxo funcionar via linha de comando (obrigatório pra um agente que não abre o Xcode.app), use
   `xcstringstool sync` (`/Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool`) apontando
   pros `.stringsdata` gerados — ver Localização.
+- **`.confirmationDialog`/`.sheet`/`.alert` do SwiftUI não funcionam de forma confiável dentro do
+  painel do `MenuBarExtra(.window)`.** Era o bug "não dá pra encerrar transcrição pela menu bar": o
+  painel de `.menuBarExtraStyle(.window)` é uma janela auxiliar não-ativável, então o diálogo de
+  confirmação simplesmente não aparecia (ou o painel perdia o key window e fechava sozinho antes do
+  usuário conseguir responder), sem erro nenhum, até parecer que o botão "Encerrar transcrição" não
+  fazia nada. É uma limitação conhecida da API (sem fix nativo da Apple até o momento). Fix: o botão
+  "Encerrar transcrição" do `MenuBarView` usa `MenuBarConfirmation.confirmEndMeeting` (em
+  `ConfirmationDialogs.swift`), que chama `NSAlert().runModal()` diretamente, isso abre uma janela modal
+  de verdade, independente do ciclo de vida do painel do menu bar. A `RecordingView` (janela real do app)
+  continua usando `.confirmationDialog` normalmente, que funciona sem problema numa `Window` de verdade.
 - **`.environment(\.locale, ...)` fixo em qualquer `Scene`/view sobrepõe o idioma do sistema pra toda a
   árvore, inclusive a resolução de `Text(LocalizedStringKey)`.** O app tinha um
   `.environment(\.locale, Locale(identifier: "pt_BR"))` fixo em `TranscribeApp.swift` (adicionado só
