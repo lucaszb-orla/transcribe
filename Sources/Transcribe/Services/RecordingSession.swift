@@ -49,8 +49,26 @@ final class RecordingSession {
         return lines.joined(separator: "\n")
     }
 
+    /// Cache: `deduped` is an O(n·m) scan, but this is a computed property re-read on every access —
+    /// including unrelated `@Observable` churn like `micLevel` ticking ~12x/sec and volatile text
+    /// streaming while someone talks. Without memoizing, a 30-60min meeting reran the full scan over
+    /// the entire transcript history that often, causing real CPU/stutter during recording. Final
+    /// segments only land occasionally (once per finalized phrase), so skip the scan whenever neither
+    /// source's segment count has moved since the last computation.
+    private var cachedLiveSegments: [TranscriptSegment] = []
+    private var cachedMicSegmentCount = 0
+    private var cachedSystemSegmentCount = 0
+
     var liveSegments: [TranscriptSegment] {
-        deduped(mic: micTranscriber.segments, systemAudio: systemTranscriber.segments)
+        let mic = micTranscriber.segments
+        let systemAudio = systemTranscriber.segments
+        guard mic.count != cachedMicSegmentCount || systemAudio.count != cachedSystemSegmentCount else {
+            return cachedLiveSegments
+        }
+        cachedMicSegmentCount = mic.count
+        cachedSystemSegmentCount = systemAudio.count
+        cachedLiveSegments = deduped(mic: mic, systemAudio: systemAudio)
+        return cachedLiveSegments
     }
 
     /// The in-progress phrase for each source, not yet finalized — used to show a "still speaking" bubble.

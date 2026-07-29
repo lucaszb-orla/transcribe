@@ -11,7 +11,7 @@ struct RecordingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
+            RecordingHeader(elapsed: elapsed)
             Divider()
             transcript
             Divider()
@@ -24,48 +24,6 @@ struct RecordingView: View {
             else { withAnimation(.snappy(duration: 0.3)) { now = date } }
         }
     }
-
-    private var header: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(appState.isPaused ? .orange : .red)
-                    .frame(width: 10, height: 10)
-                    .opacity(appState.isPaused || reduceMotion ? 1 : pulse)
-                    .animation(appState.isPaused || reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(), value: pulse)
-                Text(appState.isPaused ? "Pausado" : "Gravando")
-                    .font(.headline)
-                    .contentTransition(.opacity)
-                Spacer()
-                Text(elapsed)
-                    .font(.system(.title3, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-            }
-
-            HStack(spacing: 8) {
-                Image(systemName: appState.isPaused ? "mic.slash.fill" : "mic.fill")
-                    .foregroundStyle(appState.isPaused ? .secondary : .primary)
-                    .imageScale(.small)
-                    .contentTransition(.symbolEffect(.replace))
-                LevelMeter(level: appState.isPaused ? 0 : appState.micLevel)
-                    .frame(height: 6)
-            }
-
-            if appState.isContinuing {
-                Label("Continuando uma transcrição existente", systemImage: "arrow.uturn.left")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .padding()
-        .background(.bar)
-        .onAppear { if !reduceMotion { pulse = 0.3 } }
-    }
-
-    @State private var pulse = 1.0
 
     @ViewBuilder
     private var transcript: some View {
@@ -135,6 +93,57 @@ struct RecordingView: View {
         guard let start = appState.recordingStartedAt else { return "00:00" }
         let seconds = max(0, Int(now.timeIntervalSince(start)))
         return String(format: "%02d:%02d", seconds / 60, seconds % 60)
+    }
+}
+
+/// Status row: recording dot, elapsed time, mic level meter. Split out from `RecordingView` so that
+/// `appState.micLevel` (updated ~12x/sec while recording) only invalidates this small view instead of
+/// re-running the whole `RecordingView.body` — which would otherwise re-derive the live transcript
+/// (`appState.liveTranscript`/`liveText`) on every mic tick for no reason.
+private struct RecordingHeader: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let elapsed: String
+    @State private var pulse = 1.0
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(appState.isPaused ? .orange : .red)
+                    .frame(width: 10, height: 10)
+                    .opacity(appState.isPaused || reduceMotion ? 1 : pulse)
+                    .animation(appState.isPaused || reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(), value: pulse)
+                Text(appState.isPaused ? "Pausado" : "Gravando")
+                    .font(.headline)
+                    .contentTransition(.opacity)
+                Spacer()
+                Text(elapsed)
+                    .font(.system(.title3, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
+
+            HStack(spacing: 8) {
+                Image(systemName: appState.isPaused ? "mic.slash.fill" : "mic.fill")
+                    .foregroundStyle(appState.isPaused ? .secondary : .primary)
+                    .imageScale(.small)
+                    .contentTransition(.symbolEffect(.replace))
+                LevelMeter(level: appState.isPaused ? 0 : appState.micLevel)
+                    .frame(height: 6)
+            }
+
+            if appState.isContinuing {
+                Label("Continuando uma transcrição existente", systemImage: "arrow.uturn.left")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding()
+        .background(.bar)
+        .onAppear { if !reduceMotion { pulse = 0.3 } }
     }
 }
 
