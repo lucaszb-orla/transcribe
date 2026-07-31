@@ -236,6 +236,22 @@ linguagem natural continua no campo **Instruções adicionais** do resumo, sem t
 
 ## Gotchas conhecidos
 
+- **Uma `var` computada `@Observable` reexecuta a cada leitura, mesmo sem mudança real.**
+  `RecordingSession.liveSegments` chamava `deduped(mic:systemAudio:)` (o scan O(n·m) de
+  `RecordingSession.swift`) toda vez que era lido, e SwiftUI lê `appState.liveTranscript`/`liveText` a
+  cada re-render de `RecordingView`. Como `RecordingView.body` também lia `appState.micLevel` (atualiza
+  ~12x/s durante a gravação) e o texto "volatile" (atualiza a cada palavra reconhecida enquanto alguém
+  fala), o scan inteiro rodava dezenas de vezes por segundo sobre o histórico acumulado da reunião,
+  degradando performance ao vivo conforme a reunião ficava mais longa (era o "a gravação buga depois de
+  um tempo"). Fix em duas partes: (1) `liveSegments` agora cacheia o resultado e só recalcula quando a
+  contagem de segmentos finais de algum dos dois lados realmente mudou; (2) o pedaço de `RecordingView`
+  que lê `micLevel` virou uma `View` própria (`RecordingHeader`), porque `header`/`transcript`/`controls`
+  eram só `var` computadas na mesma struct, não views separadas, então SwiftUI não tinha como invalidar
+  só o medidor de nível sem reexecutar o `body` inteiro (e junto, o acesso à transcrição) a cada tick do
+  microfone. Regra geral: se uma `var` computada dentro de uma `@Observable`/`View` faz trabalho caro,
+  ela precisa cachear por conta própria (SwiftUI não faz isso por você), e qualquer dado que muda rápido
+  demais (nível de áudio, texto ao vivo) deve morar numa `View` isolada, não numa `var` computada dividida
+  com o resto do corpo.
 - **`AVAudioEngine` mixer + `outputVolume = 0`:** se você fizer tap no `mainMixerNode` e zerar o volume,
   o tap recebe **silêncio** (era o bug "transcrição não pega"). Por isso o mic é capturado com tap direto
   no `inputNode`, sem rota de saída: sem playback, sem eco, sem gravar em disco.
@@ -316,6 +332,16 @@ linguagem natural continua no campo **Instruções adicionais** do resumo, sem t
   esse fluxo funcionar via linha de comando (obrigatório pra um agente que não abre o Xcode.app), use
   `xcstringstool sync` (`/Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool`) apontando
   pros `.stringsdata` gerados — ver Localização.
+- **`.confirmationDialog`/`.sheet`/`.alert` do SwiftUI não funcionam de forma confiável dentro do
+  painel do `MenuBarExtra(.window)`.** Era o bug "não dá pra encerrar transcrição pela menu bar": o
+  painel de `.menuBarExtraStyle(.window)` é uma janela auxiliar não-ativável, então o diálogo de
+  confirmação simplesmente não aparecia (ou o painel perdia o key window e fechava sozinho antes do
+  usuário conseguir responder), sem erro nenhum, até parecer que o botão "Encerrar transcrição" não
+  fazia nada. É uma limitação conhecida da API (sem fix nativo da Apple até o momento). Fix: o botão
+  "Encerrar transcrição" do `MenuBarView` usa `MenuBarConfirmation.confirmEndMeeting` (em
+  `ConfirmationDialogs.swift`), que chama `NSAlert().runModal()` diretamente, isso abre uma janela modal
+  de verdade, independente do ciclo de vida do painel do menu bar. A `RecordingView` (janela real do app)
+  continua usando `.confirmationDialog` normalmente, que funciona sem problema numa `Window` de verdade.
 - **`.environment(\.locale, ...)` fixo em qualquer `Scene`/view sobrepõe o idioma do sistema pra toda a
   árvore, inclusive a resolução de `Text(LocalizedStringKey)`.** O app tinha um
   `.environment(\.locale, Locale(identifier: "pt_BR"))` fixo em `TranscribeApp.swift` (adicionado só
